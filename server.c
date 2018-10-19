@@ -129,7 +129,7 @@ void *io_thread_func() {
             }
           }
           free(tmp_line);
-          goto finish;
+          break;
         case PUT:
           req_val = strtok(NULL, "\n");
           found = 0;
@@ -174,7 +174,7 @@ void *io_thread_func() {
           free(tmp_line_copy);
           free(tmp_line);
           free(fbuf);
-          goto finish;
+          break;
         case INSERT:
           req_val = strtok(NULL, "\n");
           found = 0;
@@ -219,7 +219,7 @@ void *io_thread_func() {
           free(tmp_line_copy);
           free(tmp_line);          
           free(fbuf);
-          goto finish;
+          break;
         case DELETE:
           req_val = strtok(NULL, "\n");
           found = 0;
@@ -258,10 +258,9 @@ void *io_thread_func() {
           free(tmp_line_copy);
           free(tmp_line);          
           free(fbuf);
-          goto finish;
+          break;
       }
 
-    finish:
       v = (union sigval*) malloc (sizeof(union sigval));
       v->sival_ptr = pending_head->cont;
       sigqueue(my_pid, SIGRTMIN+4, *v); // send signal to main thread
@@ -338,7 +337,9 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
     printf("%s\n", "bad client request: req_type");
     // TODO: update timings since we send directly here (and below)
     send(temp->fd, "NULL", strlen("NULL"), 0);
-    goto finish;
+    free(tmp_err_code);
+    free(req_string);
+    return;
   }
 
   setup_request_type(req_type, &tmp_err_code);
@@ -347,7 +348,9 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
     printf("%s\n", "bad client request: req_key");
     // TODO: update timings
     send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
-    goto finish;
+    free(tmp_err_code);
+    free(req_string);
+    return;
   }
 
   if (temp->request_type == GET) {
@@ -364,7 +367,9 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
       printf("%s\n", "bad client request: req_val");
       // TODO: update timings
       send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
-      goto finish;
+      free(tmp_err_code);
+      free(req_string);
+      return;
     }
     issue_io_req();    
   } else if (temp->request_type == INSERT) {
@@ -372,13 +377,17 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
       printf("%s\n", "bad client request: req_val");
       // TODO: update timings
       send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
-      goto finish;
+      free(tmp_err_code);
+      free(req_string);
+      return;
     }
     if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
       printf("%s\n", "error: duplicate req_key violation");
       // TODO: update timings
       send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
-      goto finish;
+      free(tmp_err_code);
+      free(req_string);
+      return;
     }
     issue_io_req(); // if not in cache, still might be in db    
   } else if (temp->request_type == DELETE) {
@@ -386,10 +395,11 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
   } else {
     // TODO: update timings
     send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
-    goto finish;
+    free(tmp_err_code);
+    free(req_string);
+    return;
   }
 
-finish:
   free(tmp_err_code);
   free(req_string);
 }
