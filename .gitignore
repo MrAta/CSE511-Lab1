@@ -1,7 +1,1 @@
 Dockerfile
-.idea/
-*.o
-CMakeLists.txt
-cmake-build-debug/
-tastarter/server
-tastarter/server_new
