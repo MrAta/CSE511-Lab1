@@ -36,12 +36,11 @@
 #define INSERT 2
 #define DELETE 3
 
-/* When a SIGUSR1 signal arrives, set this variable. */
+/* When a SIGUSR1 signal arrives, set this variable. */ // ???
 volatile sig_atomic_t usr_interrupt = 0;
-// char *error_codes[4] = { "NULL", "NULL", "-1", "-1"};
 
 struct continuation {
-  int request_type; //0 for get 1 for put
+  int request_type;
   char buffer[1024];
   int fd;
   char result[MAX_VALUE_SIZE];

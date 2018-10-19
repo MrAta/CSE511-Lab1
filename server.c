@@ -265,7 +265,8 @@ void *io_thread_func() {
       v = (union sigval*) malloc (sizeof(union sigval));
       v->sival_ptr = pending_head->cont;
       sigqueue(my_pid, SIGRTMIN+4, *v); // send signal to main thread
-      pending_head = pending_head->next; // remove task from queue but dont free yet
+      free(pending_head);
+      pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
       free(req_str);
     }
     pthread_mutex_unlock(&lock);
@@ -318,6 +319,7 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
   struct sockaddr_in in;
   socklen_t sz = sizeof(in);
   char *tmp_err_code = (char *)calloc(5, sizeof(char));
+
   incoming = (int *) malloc (sizeof(int));
   *incoming = accept(initial_server_fd,(struct sockaddr*)&in, &sz);
 
@@ -388,6 +390,7 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
   }
 
 finish:
+  free(tmp_err_code);
   free(req_string);
 }
 
