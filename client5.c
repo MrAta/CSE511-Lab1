@@ -8,7 +8,7 @@
 #include <pthread.h>
 #define PORT 8080
 
-char *hello[] = {"INSERT Leslie Lamport"};
+char *hello[] = {"INSERT Aman J"};
 struct sockaddr_in *serv_addr;
 
 void *client_func() {

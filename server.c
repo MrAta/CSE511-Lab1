@@ -1,5 +1,7 @@
 #include "server.h"
 
+pthread_mutex_t lock;
+
 int max (int a, int b) {
   return (a>b?a:b);
 }
@@ -52,7 +54,7 @@ void put (char *name, char *defn) {
     temp_node->next = temp_node->prev = NULL;
     if(head == NULL) {
       head = tail = temp_node;
-    } else {
+    } else { // put at front of cache
       head->prev = temp_node;
       temp_node->next = head;
       temp_node->prev = NULL;
@@ -61,10 +63,12 @@ void put (char *name, char *defn) {
     if (global_cache_count >= CACHE_SIZE) {
       // cache is full, evict the last node
       // insert a new node in the list
+      struct node *tmp = tail;
       tail = tail->prev;
       tail->next = NULL;
 
       //TODO: Free the memory as you evict nodes
+      free(tmp);
     } else {
       // Increase the count
       global_cache_count++;
@@ -76,105 +80,364 @@ void put (char *name, char *defn) {
 }
 
 void *io_thread_func() {
-  // This function should handle incoming I/O requests,
-  // once the request is processed, the thread notifies
-  // the event schuduler using a signal
-
-  // Complete this function to implement I/O functionality
-  // for incoming requests and handle proper synchronization
-  // among other helper threads
+  char *req_str = NULL;
+  char *req_type = NULL;
+  char *req_key = NULL;
+  char *req_val = NULL;
+  char *tmp_line = NULL;
+  char *tmp_line_copy = NULL;
+  char *line_key = NULL;
+  char *line_val = NULL;
+  int found = 0;
+  struct stat st;
+  int fsz = 0;
+  char *fbuf = NULL;
+  int fbuf_bytes = 0;
 
   while(1) {
+    // we are either appending to queue below or executing a queue here; to maintain consistency can never do both so we 
+    // use a single lock to do writes/reads to files
+    pthread_mutex_lock(&lock);
+
     if (pending_head != NULL) {
-      if (pending_head->cont->request_type == 0) {
-       strcpy(pending_head->cont->result, "SAMPLE RESPONSE");
-      } else {
-       strcpy(pending_head->cont->result, "1");
+
+      req_str = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
+      strcpy (req_str, pending_head->cont->buffer);
+
+      // at this point request in buffer is valid string
+      req_type = strtok(req_str, " ");
+      req_key = strtok(NULL, " ");
+
+      rewind(file);
+      switch (pending_head->cont->request_type) {
+        case GET:
+          tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          while (1) {
+            if(fgets(tmp_line, MAX_ENTRY_SIZE, file) !=  NULL) {
+              line_key = strtok(tmp_line, " ");
+              if (strcmp(line_key, req_key) == 0) { // found key in db
+                line_val = strtok(NULL, " ");
+                strncpy(pending_head->cont->result, line_val, strlen(line_val));
+                strncpy(pending_head->cont->result+strlen(line_val), "\0", 1); // copy null byte too
+                break;
+              } else { // line key doesnt match search key, just go to next line
+                continue;
+              }
+            } else { // end of file (or other error reading); didnt find key
+              strcpy(pending_head->cont->result, "NULL");
+              break;
+            }
+          }
+          free(tmp_line);
+          goto finish;
+        case PUT:
+          req_val = strtok(NULL, "\n");
+          found = 0;
+          tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          stat("names.txt", &st);
+          fsz = st.st_size;
+          fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char)); // need enough buffer space for the entire file plus an additional entry assuming the key isnt in the db
+          fbuf_bytes = 0;
+          while (1) {
+            if(fgets(tmp_line, MAX_ENTRY_SIZE, file) !=  NULL) {
+              memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
+              memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
+              line_key = strtok(tmp_line, " ");
+              if (strcmp(line_key, req_key) == 0) { // found key in db, ignore this line for file rewrite
+                found = 1;
+                continue;
+              } else { // line key doesnt match search key, go to next line
+                memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
+                fbuf_bytes = fbuf_bytes + strlen(tmp_line_copy);
+                continue;
+              }
+            } else { // must read to end of file
+              break;
+            }
+          }
+          if (!found) {
+            strcpy(pending_head->cont->result, "NULL"); // key not found in db to do put, return NULL, dont update to file
+          } else {
+            // key found in db, add the new k/v to the end of file
+            memcpy(fbuf+fbuf_bytes, req_key, strlen(req_key));
+            memcpy(fbuf+fbuf_bytes+strlen(req_key), " ", 1);
+            memcpy(fbuf+fbuf_bytes+strlen(req_key)+1, req_val, strlen(req_val));
+            memcpy(fbuf+fbuf_bytes+strlen(req_key)+1+strlen(req_val), "\n", 1);
+
+            rewind(file);
+            fwrite(fbuf, sizeof(char), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1, file);
+            fflush(file);
+            ftruncate(fileno(file), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1);
+            strncpy(pending_head->cont->result, "0", sizeof("0"));
+          }
+          free(tmp_line_copy);
+          free(tmp_line);
+          free(fbuf);
+          goto finish;
+        case INSERT:
+          req_val = strtok(NULL, "\n");
+          found = 0;
+          tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          stat("names.txt", &st);
+          fsz = st.st_size;
+          fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char));
+          fbuf_bytes = 0;
+          while (1) {
+            if(fgets(tmp_line, MAX_ENTRY_SIZE, file) !=  NULL) {
+              memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
+              memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
+              line_key = strtok(tmp_line, " ");
+              if (strcmp(line_key, req_key) == 0) { // found key in db; error
+                found = 1;
+                break;
+              } else { // line key doesnt match search key, go to next line
+                memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
+                fbuf_bytes += strlen(tmp_line_copy);
+                continue;
+              }
+            } else { // end of file
+              break;
+            }
+          }
+          if (found) { // duplicate key error
+            strcpy(pending_head->cont->result, "NULL");
+          } else {
+            // key not found in db, add the new k/v to the end of file
+            memcpy(fbuf+fbuf_bytes, req_key, strlen(req_key));
+            memcpy(fbuf+fbuf_bytes+strlen(req_key), " ", 1);
+            memcpy(fbuf+fbuf_bytes+strlen(req_key)+1, req_val, strlen(req_val));
+            memcpy(fbuf+fbuf_bytes+strlen(req_key)+1+strlen(req_val), "\n", 1);
+            
+            rewind(file);
+            fwrite(fbuf, sizeof(char), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1, file);
+            fflush(file);
+            ftruncate(fileno(file), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1);
+            strncpy(pending_head->cont->result, "0", sizeof("0"));
+          }
+          free(tmp_line_copy);
+          free(tmp_line);          
+          free(fbuf);
+          goto finish;
+        case DELETE:
+          req_val = strtok(NULL, "\n");
+          found = 0;
+          tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          stat("names.txt", &st);
+          fsz = st.st_size;
+          fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char));
+          fbuf_bytes = 0;
+          while (1) {
+            if(fgets(tmp_line, MAX_VALUE_SIZE, file) !=  NULL) {
+              memset(tmp_line_copy, 0, MAX_VALUE_SIZE);
+              memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
+              line_key = strtok(tmp_line, " ");
+              if (strcmp(line_key, req_key) == 0) { // found key in db; ignore this line for file rewrite
+                found = 1;
+                continue;
+              } else { // line key doesnt match search key, copy to buffer and go to next line
+                memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
+                fbuf_bytes += strlen(tmp_line_copy);
+                continue;
+              }
+            } else { // must read to end of file
+              break;
+            }
+          }
+          if (!found) {
+            strcpy(pending_head->cont->result, "-1"); // key not found in db to do delete, return -1, dont update to file
+          } else { // key found in db, write fbuf to file without that entry
+            rewind(file);
+            fwrite(fbuf, sizeof(char), fbuf_bytes, file);
+            fflush(file);
+            ftruncate(fileno(file), fbuf_bytes);
+            strncpy(pending_head->cont->result, "0", sizeof("0"));
+          }
+          free(tmp_line_copy);
+          free(tmp_line);          
+          free(fbuf);
+          goto finish;
       }
+
+    finish:
       v = (union sigval*) malloc (sizeof(union sigval));
-        v->sival_ptr = pending_head->cont;
-        sigqueue(my_pid, SIGRTMIN+4, *v);
-        pending_head = pending_head->next;
+      v->sival_ptr = pending_head->cont;
+      sigqueue(my_pid, SIGRTMIN+4, *v); // send signal to main thread
+      pending_head = pending_head->next; // remove task from queue but dont free yet
+      free(req_str);
     }
+    pthread_mutex_unlock(&lock);
   }
 }
 
+void setup_request_type(char *s, char **tec) {
+  if (strcmp(s, "GET") == 0) {
+    temp->request_type = GET;
+    memcpy(*tec, "NULL", 5); 
+  } else if (strcmp(s, "PUT") == 0) {
+    temp->request_type = PUT;
+    memcpy(*tec, "NULL", 5);
+  } else if (strcmp(s, "INSERT") == 0) {
+    temp->request_type = INSERT;
+    memcpy(*tec, "-1", 3);
+  } else if (strcmp(s, "DELETE") == 0) {
+    temp->request_type = DELETE;
+    memcpy(*tec, "-1", 3);
+  } else {
+    temp->request_type = INVALID;
+    memcpy(*tec, "-1", 3);
+  }
+}
+
+/*
+  This func is only executed by the main thread, and appends a task to the back of the
+  task queue
+*/
+void issue_io_req() {
+  pthread_mutex_lock(&lock);
+  pending_node = (struct pending_queue*) malloc (sizeof(struct pending_queue));
+  pending_node->cont = temp;
+  pending_node->next = NULL;
+  if (pending_head == NULL) {
+    pending_head = pending_tail = pending_node;
+  } else {
+    pending_tail->next = pending_node;
+    pending_tail = pending_node;
+  }
+  pthread_mutex_unlock(&lock);
+}
+
 static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
-    int fl, valread;
-    struct sockaddr_in in;
-    socklen_t sz = sizeof(in);
-    char *request_string, *request_key, *request_value, *tokens;
-    char *temp_string;
-    incoming = (int *) malloc (sizeof(int));
-    *incoming = accept(initial_server_fd,(struct sockaddr*)&in, &sz);
+  int valread;
+  char *req_string;
+  char *req_type = NULL;
+  char *req_key = NULL;
+  char *req_val = NULL;
+  struct sockaddr_in in;
+  socklen_t sz = sizeof(in);
+  char *tmp_err_code = (char *)calloc(5, sizeof(char));
+  incoming = (int *) malloc (sizeof(int));
+  *incoming = accept(initial_server_fd,(struct sockaddr*)&in, &sz);
 
-    temp = (struct continuation*) malloc (sizeof (struct continuation));
-    temp->start_time = time(0);
+  temp = (struct continuation *)malloc(sizeof(struct continuation));
+  temp->start_time = time(0);
+  memset(temp->buffer, 0, MAX_ENTRY_SIZE);
+  valread = read(*incoming, temp->buffer, MAX_ENTRY_SIZE);
 
-    temp_string = (char *) malloc (1024 * sizeof(char));
-    memset(temp->buffer, 0, 1024);
-    valread = read( *incoming , temp->buffer, 1024);
+  req_string = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
+  strcpy (req_string, temp->buffer);
 
-    strcpy (temp_string, temp->buffer);
-    tokens = strtok(temp_string, " ");
+  memset(temp->result, 0, MAX_ENTRY_SIZE);
+  temp->fd = *incoming;
 
-    if (strcmp(tokens, "GET") == 0) {
-      temp->request_type = 0;
-    } else {
-      temp->request_type = 1;
+  if ((req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
+    printf("%s\n", "bad client request: req_type");
+    // TODO: update timings since we send directly here (and below)
+    send(temp->fd, "NULL", strlen("NULL"), 0);
+    goto finish;
+  }
+
+  setup_request_type(req_type, &tmp_err_code);
+
+  if ((req_key = strtok(NULL, " ")) == NULL) {
+    printf("%s\n", "bad client request: req_key");
+    // TODO: update timings
+    send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
+    goto finish;
+  }
+
+  if (temp->request_type == GET) {
+    if ((temp_node = get(req_key)) != NULL) { // check cache
+      printf("\nGET result found in cache\n\n");
+      strcpy(temp->result, temp_node->defn);
+      // TODO: update timings
+      send(temp->fd ,temp->result , strlen(temp->result) , 0);
+    } else { // not in cache, check db
+      issue_io_req();
     }
-
-    memset(temp->result, 0, 1024);
-    temp->fd = *incoming;
-
-    // Servicing the request
-    if (temp->request_type == 0) {
-
-      // This is a GET request, check the cache first
-      tokens = strtok(NULL, " ");
-      temp_node = get(tokens);
-      if (temp_node != NULL) {
-
-        // Result found in cache
-        printf("\nResult found in cache\n\n");
-        strcpy(temp->result, temp_node->defn);
-        send(temp->fd ,temp->result , strlen(temp->result) , 0);
-      } else {
-
-        // Not found in cache, issue request to I/O
-        pending_node = (struct pending_queue*) malloc (sizeof(struct pending_queue));
-        pending_node->cont = temp;
-        pending_node->next = NULL;
-        if (pending_head == NULL) {
-          pending_head = pending_tail = pending_node;
-        } else {
-          pending_tail->next = pending_node;
-          pending_tail = pending_node;
-        }
-      }
-    } else if (temp->request_type == 1) {
-
-      // This is a PUT request, complete the function
-      // to service the request.
-
-      pending_node = (struct pending_queue*) malloc (sizeof(struct pending_queue));
-      pending_node->cont = temp;
-      pending_node->next = NULL;
-      if (pending_head == NULL) {
-        pending_head = pending_tail = pending_node;
-      } else {
-        pending_tail->next = pending_node;
-        pending_tail = pending_node;
-      }
+  } else if (temp->request_type == PUT) {
+    if ((req_val = strtok(NULL, " ")) == NULL) {
+      printf("%s\n", "bad client request: req_val");
+      // TODO: update timings
+      send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
+      goto finish;
     }
+    issue_io_req();    
+  } else if (temp->request_type == INSERT) {
+    if ((req_val = strtok(NULL, " ")) == NULL) {
+      printf("%s\n", "bad client request: req_val");
+      // TODO: update timings
+      send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
+      goto finish;
+    }
+    if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
+      printf("%s\n", "error: duplicate req_key violation");
+      // TODO: update timings
+      send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
+      goto finish;
+    }
+    issue_io_req(); // if not in cache, still might be in db    
+  } else if (temp->request_type == DELETE) {
+    issue_io_req(); // issue io request to find out if req_key is in db to delete    
+  } else {
+    // TODO: update timings
+    send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
+    goto finish;
+  }
+
+finish:
+  free(req_string);
 }
 
 static void outgoing_data_handler(int sig, siginfo_t *si, void *data) {
-  // Function to be completed.
 
-  struct continuation *temp_cont_to_send = (struct continuation*)si->si_value.sival_ptr;
-  send(temp_cont_to_send->fd, temp_cont_to_send->result, strlen(temp_cont_to_send->result), 0);
-  free(temp_cont_to_send);
+  // update time measurements and cache in this func
+
+  struct continuation *req_cont = (struct continuation *)si->si_value.sival_ptr;
+  char *req_string = (char *)calloc(MAX_KEY_SIZE, sizeof(char));
+  char *req_type = NULL;
+  char *req_key = NULL;
+  char *val = NULL;
+  
+  strcpy(req_string, req_cont->buffer); // buffer includes null byte
+  req_type = strtok(req_string, " ");
+  req_key = strtok(NULL, " ");
+
+  if (req_cont->request_type == GET) {
+    // TODO: update time measurements
+    if(strcmp(req_cont->result, "NULL") != 0) { // if result was NULL there was some kind of error
+      put(req_key, req_cont->result);
+    }
+  } else if (req_cont->request_type == PUT) {
+    // TODO: update time measurements
+    if(strcmp(req_cont->result, "NULL") != 0) {
+      val = strtok(NULL, " ");
+      put(req_key, val);
+    }
+
+  } else if (req_cont->request_type == INSERT) {
+    // TODO: update time measurements
+    if(strcmp(req_cont->result, "NULL") != 0) {
+      val = strtok(NULL, " ");
+      put(req_key, val);
+    }
+  } else { // DELETE
+    // TODO: update time measurements
+    if(strcmp(req_cont->result, "NULL") != 0) {
+      if ((temp_node = get(req_key)) != NULL) { // if in cache, delete it
+        curr = head;
+        head->next->prev = NULL;
+        head = head->next;
+        free(curr);
+      }
+    }
+  }
+
+  send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
+  free(req_string);
+  free(req_cont); // frees the cont that was just executed
 }
 
 static int make_socket_non_blocking (int sfd) {
@@ -230,7 +493,7 @@ void event_loop_scheduler() {
      int fl;
 
      fl = fcntl(initial_server_fd, F_GETFL);
-     fl |= O_ASYNC|O_NONBLOCK;     /* want a signal on fd ready */
+     fl |= O_ASYNC|O_NONBLOCK; // want a signal on fd ready
      fcntl(initial_server_fd, F_SETFL, fl);
      fcntl(initial_server_fd, F_SETSIG, SIGRTMIN + 3);
      fcntl(initial_server_fd, F_SETOWN, getpid());
@@ -267,7 +530,7 @@ int main (void)
   react.sa_flags = SA_SIGINFO;
   sigaction(SIGRTMIN + 4, &react, NULL);
 
-  //Creating I/O thread pool
+  // Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
     pthread_create(&io_thread[i], NULL, io_thread_func, NULL);
   }
