@@ -227,29 +227,45 @@ int server_func() {
 
 void event_loop_scheduler() {
      initial_server_fd = server_func();
-     int fl;
+     int retval;
+     //according to manpage, timeout should be 0 for polling
+     struct timeval tv;
+     tv.tv_sec = 10;
+     tv.tv_usec = 0;
 
-     fl = fcntl(initial_server_fd, F_GETFL);
-     fl |= O_ASYNC|O_NONBLOCK;     /* want a signal on fd ready */
-     fcntl(initial_server_fd, F_SETFL, fl);
-     fcntl(initial_server_fd, F_SETSIG, SIGRTMIN + 3);
-     fcntl(initial_server_fd, F_SETOWN, getpid());
+     //Watch fd to see when it has input TODO: should it be in while loop?
+     fd_set rfds;
+     FD_ZERO(&rfds);
+     FD_SET(initial_server_fd, &rfds);
 
-     if (listen(initial_server_fd, 5000) < 0) {
-         perror("listen");
-         exit(EXIT_FAILURE);
-     }
+      if (listen(initial_server_fd, 5000) < 0) {
+              perror("listen");
+              exit(EXIT_FAILURE);
+          }
+//while(1){
+     retval = select(initial_server_fd+1, &rfds, NULL, NULL, &tv);
+     if (retval == -1)
+        perror("select()");
+    else if (retval){
+      if(FD_ISSET(initial_server_fd, &rfds)){
+        printf("Data available\n" );
+      }
+      else{
+        perror("FD_ISSET()");
+      }
+    }
+    else{
+      printf("%d\n", retval );
+      printf("No data available\n" );
+    }
+//} end of while loop
+    exit(EXIT_SUCCESS);
 
-     while (1) {
-        printf("Waiting for a signal\n");
-        pause();
-        printf("Got some event on fd\n");
-     }
+
 }
 
 int main (void)
 {
-  struct sigaction act, react;
   my_pid = getpid();
 
   pending_head = pending_tail = NULL;
@@ -257,15 +273,7 @@ int main (void)
 
   file = fopen("names.txt", "r+");
 
-  act.sa_sigaction = incoming_connection_handler;
-  sigemptyset(&act.sa_mask);
-  act.sa_flags = SA_SIGINFO;
-  sigaction(SIGRTMIN + 3, &act, NULL);
 
-  react.sa_sigaction = outgoing_data_handler;
-  sigemptyset(&react.sa_mask);
-  react.sa_flags = SA_SIGINFO;
-  sigaction(SIGRTMIN + 4, &react, NULL);
 
   //Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {

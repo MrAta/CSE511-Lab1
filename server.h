@@ -12,12 +12,15 @@
 #include <sys/epoll.h>
 #include <pthread.h>
 
+#include <sys/select.h>
+#include <sys/time.h>
+
 #define SIGUNUSED   31
 
-#define _NSIG       65  /* Biggest signal number + 1  
+#define _NSIG       65  /* Biggest signal number + 1
                    (including real-time signals).  */
-#define SIGRTMIN        (__libc_current_sigrtmin ())  
-#define SIGRTMAX        (__libc_current_sigrtmax ()) 
+#define SIGRTMIN        (__libc_current_sigrtmin ())
+#define SIGRTMAX        (__libc_current_sigrtmax ())
 
 #define PORT 8080
 
