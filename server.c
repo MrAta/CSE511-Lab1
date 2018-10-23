@@ -1,5 +1,6 @@
 #include "server.h"
-
+int sockfds[5000];
+int max_fd = 0;
 int max (int a, int b) {
   return (a>b?a:b);
 }
@@ -99,83 +100,6 @@ void *io_thread_func() {
   }
 }
 
-static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
-    int fl, valread;
-    struct sockaddr_in in;
-    socklen_t sz = sizeof(in);
-    char *request_string, *request_key, *request_value, *tokens;
-    char *temp_string;
-    incoming = (int *) malloc (sizeof(int));
-    *incoming = accept(initial_server_fd,(struct sockaddr*)&in, &sz);
-
-    temp = (struct continuation*) malloc (sizeof (struct continuation));
-    temp->start_time = time(0);
-
-    temp_string = (char *) malloc (1024 * sizeof(char));
-    memset(temp->buffer, 0, 1024);
-    valread = read( *incoming , temp->buffer, 1024);
-
-    strcpy (temp_string, temp->buffer);
-    tokens = strtok(temp_string, " ");
-
-    if (strcmp(tokens, "GET") == 0) {
-      temp->request_type = 0;
-    } else {
-      temp->request_type = 1;
-    }
-
-    memset(temp->result, 0, 1024);
-    temp->fd = *incoming;
-
-    // Servicing the request
-    if (temp->request_type == 0) {
-
-      // This is a GET request, check the cache first
-      tokens = strtok(NULL, " ");
-      temp_node = get(tokens);
-      if (temp_node != NULL) {
-
-        // Result found in cache
-        printf("\nResult found in cache\n\n");
-        strcpy(temp->result, temp_node->defn);
-        send(temp->fd ,temp->result , strlen(temp->result) , 0);
-      } else {
-
-        // Not found in cache, issue request to I/O
-        pending_node = (struct pending_queue*) malloc (sizeof(struct pending_queue));
-        pending_node->cont = temp;
-        pending_node->next = NULL;
-        if (pending_head == NULL) {
-          pending_head = pending_tail = pending_node;
-        } else {
-          pending_tail->next = pending_node;
-          pending_tail = pending_node;
-        }
-      }
-    } else if (temp->request_type == 1) {
-
-      // This is a PUT request, complete the function
-      // to service the request.
-
-      pending_node = (struct pending_queue*) malloc (sizeof(struct pending_queue));
-      pending_node->cont = temp;
-      pending_node->next = NULL;
-      if (pending_head == NULL) {
-        pending_head = pending_tail = pending_node;
-      } else {
-        pending_tail->next = pending_node;
-        pending_tail = pending_node;
-      }
-    }
-}
-
-static void outgoing_data_handler(int sig, siginfo_t *si, void *data) {
-  // Function to be completed.
-
-  struct continuation *temp_cont_to_send = (struct continuation*)si->si_value.sival_ptr;
-  send(temp_cont_to_send->fd, temp_cont_to_send->result, strlen(temp_cont_to_send->result), 0);
-  free(temp_cont_to_send);
-}
 
 static int make_socket_non_blocking (int sfd) {
   int flags, s;
@@ -227,38 +151,76 @@ int server_func() {
 
 void event_loop_scheduler() {
      initial_server_fd = server_func();
+     if (initial_server_fd > max_fd)
+          max_fd = initial_server_fd;
      int retval;
      //according to manpage, timeout should be 0 for polling
      struct timeval tv;
-     tv.tv_sec = 10;
+     tv.tv_sec = 0;
      tv.tv_usec = 0;
 
      //Watch fd to see when it has input TODO: should it be in while loop?
      fd_set rfds;
-     FD_ZERO(&rfds);
-     FD_SET(initial_server_fd, &rfds);
 
       if (listen(initial_server_fd, 5000) < 0) {
               perror("listen");
               exit(EXIT_FAILURE);
           }
-//while(1){
-     retval = select(initial_server_fd+1, &rfds, NULL, NULL, &tv);
+while(1){
+  FD_ZERO(&rfds);
+  FD_SET(initial_server_fd, &rfds);
+  for(int i=0; i < 5000; i++){
+    if(sockfds[i] != -1){
+      FD_SET(sockfds[i], &rfds);
+    }
+  }
+     retval = select(max_fd+1, &rfds, NULL, NULL, &tv);
      if (retval == -1)
         perror("select()");
+
     else if (retval){
       if(FD_ISSET(initial_server_fd, &rfds)){
+        struct address_in in;
+        socketlen_t sz = sizeof(in);
+        int new_fd = accept(initial_server_fd, (struct address *)&in, &sz);
+        if (new_fd < 0){
+          perror("Could not accept connection");
+          continue;
+        }
+
+        if (new_fd > max_fd) max_fd = new_fd;
+
+        FD_SET(new_fd, &rfds);
+        for(int i=0; i < 5000; i++){
+          if (sockfds[i] ==-1) {
+            sockfds[i] = new_fds;
+            break;
+          }
+        }
         printf("Data available\n" );
       }
-      else{
-        perror("FD_ISSET()");
+      //check for others
+      for (int i=0; i< 5000; i++){
+        if(sockfds[i] != -1){
+          if(FD_ISSET(sockfds[i], &rfds)){
+            //read from it!
+            int valread;
+            valread = read();
+
+          }
+        }
       }
+      //for all others {
+      //if set process the event
+      //process and read the event
+    //}
     }
     else{
       printf("%d\n", retval );
       printf("No data available\n" );
     }
-//} end of while loop
+
+} end of while loop
     exit(EXIT_SUCCESS);
 
 
@@ -273,7 +235,8 @@ int main (void)
 
   file = fopen("names.txt", "r+");
 
-
+  //initilize socket fds:
+  for(int i=0; i< 5000) sockfds[i] = -1;
 
   //Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
