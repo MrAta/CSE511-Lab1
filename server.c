@@ -103,7 +103,9 @@ void *io_thread_func() {
     if (pending_head != NULL) {
 
       req_str = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
+
       strcpy (req_str, pending_head->cont->buffer);
+
       // at this point request in buffer is valid string
       req_type = strtok(req_str, " ");
       req_key = strtok(NULL, " ");
@@ -117,6 +119,7 @@ void *io_thread_func() {
             if(strcmp(line_key, req_key) == 0){
               //ke in db
               line_val = strtok(NULL, " ");
+              // printf("119 line valL %s\n",line_val );
               strncpy(pending_head->cont->result, line_val, strlen(line_val));
               strncpy(pending_head->cont->result+strlen(line_val), "\0", 1); // copy null byte too
               break;
@@ -263,6 +266,14 @@ void *io_thread_func() {
           break;
     }
     //TODO: notify main thread!
+    //writing to pipe_fd
+    int pipe_write_res;
+    printf("274 I'm writing this: %s\n", pending_head->cont->buffer);
+    pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//?
+    printf("273 num written bytes: %d\n",pipe_write_res );
+    if(pipe_write_res < 0){
+      perror("write");
+    }
     free(pending_head);
     pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
   }
@@ -286,6 +297,56 @@ void issue_io_req() {
     pending_tail = pending_node;
   }
   pthread_mutex_unlock(&lock);
+}
+void on_read_from_pip(){
+  struct continuation *req_cont = (struct continuation *)malloc(sizeof(struct continuation));//TODO
+  int read_pipe_res;
+  read_pipe_res = read(pipe_fd[0],req_cont, sizeof(struct continuation));
+  printf("305 num read bytes: %d\n", read_pipe_res);
+  if(read_pipe_res < 0){
+    perror("read");
+  }
+  char *req_string = (char *)calloc(MAX_KEY_SIZE, sizeof(char));
+  char *req_type = NULL;
+  char *req_key = NULL;
+  char *val = NULL;
+  strcpy(req_string, req_cont->buffer); // buffer includes null byte
+  printf("313 I'm reading this: %s\n", req_cont->buffer);
+  req_type = strtok(req_string, " ");
+  req_key = strtok(NULL, " ");
+    if (req_cont->request_type == GET) {
+     // TODO: update time measurements
+     if(strcmp(req_cont->result, "NULL") != 0) { // if result was NULL there was some kind of error
+       put(req_key, req_cont->result);
+     }
+   } else if (req_cont->request_type == PUT) {
+     // TODO: update time measurements
+     if(strcmp(req_cont->result, "NULL") != 0) {
+       val = strtok(NULL, " ");
+       put(req_key, val);
+     }
+
+   } else if (req_cont->request_type == INSERT) {
+     // TODO: update time measurements
+     if(strcmp(req_cont->result, "NULL") != 0) {
+       val = strtok(NULL, " ");
+       put(req_key, val);
+     }
+   } else { // DELETE
+     // TODO: update time measurements
+     if(strcmp(req_cont->result, "NULL") != 0) {
+       if ((temp_node = get(req_key)) != NULL) { // if in cache, delete it
+         curr = head;
+         head->next->prev = NULL;
+         head = head->next;
+         free(curr);
+       }
+     }
+  }
+
+  send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
+  free(req_string);
+  free(req_cont); // frees the cont that was just executed
 }
 static int make_socket_non_blocking (int sfd) {
   int flags, s;
@@ -336,9 +397,22 @@ int server_func() {
 }
 
 void event_loop_scheduler() {
-     initial_server_fd = server_func();
-     if (initial_server_fd > max_fd)
-          max_fd = initial_server_fd;
+    int pipe_res;
+    pipe_res = pipe(pipe_fd);
+    if(pipe_res < 0){
+      perror("pipe");
+      exit(EXIT_FAILURE);
+    }
+    if(pipe_fd[0] > max_fd){
+      // printf("pipe: %d\n", pipe_fd[0]);
+      max_fd = pipe_fd[0];
+    }
+    initial_server_fd = server_func();
+    if (initial_server_fd > max_fd){
+      // printf("ser: %d\n", initial_server_fd);
+      max_fd = initial_server_fd;
+    }
+          // printf("max: %d\n", max_fd);
      int retval;
      //according to manpage, timeout should be 0 for polling
      struct timeval tv;
@@ -355,6 +429,7 @@ void event_loop_scheduler() {
 while(1){
   FD_ZERO(&rfds);
   FD_SET(initial_server_fd, &rfds);
+  FD_SET(pipe_fd[0], &rfds);
   for(int i=0; i < 5000; i++){
     if(sockfds[i] != -1){
       FD_SET(sockfds[i], &rfds);
@@ -384,6 +459,12 @@ while(1){
           }
         }
         printf("Data available\n" );
+      }
+      //check for pipe fd:
+      if(FD_ISSET(pipe_fd[0], &rfds)){
+        //read from pipe
+        //send to cont->fd
+        on_read_from_pip();
       }
       //check for others
       for (int i=0; i< 5000; i++){
@@ -482,10 +563,10 @@ while(1){
         }
       }
 
-    }
+    }// end of if retavl is a good value!
     else{
-      printf("%d\n", retval );
-      printf("No data available\n" );
+      // printf("%d\n", retval );
+      // printf("No data available\n" );
     }
 
 } //end of while loop

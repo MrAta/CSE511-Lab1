@@ -66,7 +66,7 @@ pthread_t io_thread[THREAD_POOL_SIZE];
 int addrlen, opt = 1;
 int *val,*incoming;
 int *temp_val;
-int initial_server_fd;
+int initial_server_fd, pipe_fd[2];
 int global_cache_count = 0;
 pid_t my_pid;
 union sigval *v;
