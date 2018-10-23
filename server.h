@@ -28,6 +28,17 @@
 
 #define THREAD_POOL_SIZE 1
 
+// need to check over these
+#define MAX_KEY_SIZE 1024
+#define MAX_VALUE_SIZE 1024
+#define MAX_ENTRY_SIZE 1024
+
+#define INVALID -1
+#define GET 0
+#define PUT 1
+#define INSERT 2
+#define DELETE 3
+
 /* When a SIGUSR1 signal arrives, set this variable. */
 volatile sig_atomic_t usr_interrupt = 0;
 

@@ -1,6 +1,7 @@
 #include "server.h"
 int sockfds[5000];
 int max_fd = 0;
+pthread_mutex_t lock;
 int max (int a, int b) {
   return (a>b?a:b);
 }
@@ -77,9 +78,7 @@ void put (char *name, char *defn) {
 }
 
 void *io_thread_func() {
-  // This function should handle incoming I/O requests,
-  // once the request is processed, the thread notifies
-  // the event schuduler using a signal
+
 
   // Complete this function to implement I/O functionality
   // for incoming requests and handle proper synchronization
@@ -100,7 +99,23 @@ void *io_thread_func() {
   }
 }
 
-
+/*
+  This func is only executed by the main thread, and appends a task to the back of the
+  task queue
+*/
+void issue_io_req() {
+  pthread_mutex_lock(&lock);
+  pending_node = (struct pending_queue*) malloc (sizeof(struct pending_queue));
+  pending_node->cont = temp;
+  pending_node->next = NULL;
+  if (pending_head == NULL) {
+    pending_head = pending_tail = pending_node;
+  } else {
+    pending_tail->next = pending_node;
+    pending_tail = pending_node;
+  }
+  pthread_mutex_unlock(&lock);
+}
 static int make_socket_non_blocking (int sfd) {
   int flags, s;
 
@@ -180,7 +195,7 @@ while(1){
 
     else if (retval){
       if(FD_ISSET(initial_server_fd, &rfds)){
-        struct address_in in;
+        struct sockaddr_in in;
         socketlen_t sz = sizeof(in);
         int new_fd = accept(initial_server_fd, (struct address *)&in, &sz);
         if (new_fd < 0){
@@ -205,22 +220,104 @@ while(1){
           if(FD_ISSET(sockfds[i], &rfds)){
             //read from it!
             int valread;
-            valread = read();
+            char * req_string;
+            char * req_type = NULL;
+            char * req_key = NULL;
+            char * req_val = NULL;
+
+            temp = (struct continuation *)malloc(sizeof(struct continuation));
+            temp->start_time = time(0);
+            memset(temp->buffer, 0, MAX_ENTRY_SIZE);
+
+            valread = read(sockfds[i], temp->buffer, MAX_ENTRY_SIZE);
+            req_string = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
+            strcpy (req_string, temp->buffer);
+
+            memset(temp->result, 0, MAX_ENTRY_SIZE);
+            temp->fd = sockfds[i];
+
+            if ((req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
+              printf("%s\n", "bad client request: req_type");
+              // TODO: update timings since we send directly here (and below)
+              free(req_string);
+              continue;
+            }
+
+            //checking reques type
+            if (strcmp(req_type, "GET") == 0) {
+               temp->request_type = GET;
+             } else if (strcmp(req_type, "PUT") == 0) {
+               temp->request_type = PUT;
+             } else if (strcmp(req_type, "INSERT") == 0) {
+               temp->request_type = INSERT;
+             } else if (strcmp(req_type, "DELETE") == 0) {
+               temp->request_type = DELETE;
+             } else {
+               temp->request_type = INVALID;
+            }
+
+            //set the key
+          if ((req_key = strtok(NULL, " ")) == NULL) {
+             printf("%s\n", "bad client request: req_key");
+             free(req_string);
+             continue;
+          }
+
+            //perfom the request:
+
+              if (temp->request_type == GET) {
+                if ((temp_node = get(req_key)) != NULL) { // check cache
+                  printf("\nGET result found in cache\n\n");
+                  strcpy(temp->result, temp_node->defn);
+                  //TODO: what should I do?
+
+                } else { // not in cache, check db
+                  issue_io_req();
+                }
+            }
+            else if (temp->request_type == PUT) {
+                if ((req_val = strtok(NULL, " ")) == NULL) {
+                  printf("%s\n", "bad client request: req_val");
+                  free(req_string);
+                  continue;
+                }
+                //TODO: attaching req_val to temp node?
+                issue_io_req();
+            }
+            else if (temp->request_type == INSERT) {
+                if ((req_val = strtok(NULL, " ")) == NULL) {
+                  printf("%s\n", "bad client request: req_val");
+                  free(req_string);
+                  continue;
+                }
+                if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
+                  printf("%s\n", "error: duplicate req_key violation");
+                  free(req_string);
+                  continue;
+                }
+                issue_io_req(); // if not in cache, still might be in db
+                }
+                else if (temp->request_type == DELETE) {
+                issue_io_req(); // issue io request to find out if req_key is in db to delete
+              } else {
+                free(req_string);
+                continue;
+                }
+
+
+              //now what?
 
           }
         }
       }
-      //for all others {
-      //if set process the event
-      //process and read the event
-    //}
+
     }
     else{
       printf("%d\n", retval );
       printf("No data available\n" );
     }
 
-} end of while loop
+} //end of while loop
     exit(EXIT_SUCCESS);
 
 
