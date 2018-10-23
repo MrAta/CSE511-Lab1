@@ -393,6 +393,7 @@ int server_func() {
 }
 
 void event_loop_scheduler() {
+    //create pipe fd for connecting threads in thread pool to main thread
     int pipe_res;
     pipe_res = pipe(pipe_fd);
     if(pipe_res < 0){
@@ -402,6 +403,7 @@ void event_loop_scheduler() {
     if(pipe_fd[0] > max_fd){
       max_fd = pipe_fd[0];
     }
+    //creating main thread fd
     initial_server_fd = server_func();
     if (initial_server_fd > max_fd){
       max_fd = initial_server_fd;
@@ -412,7 +414,7 @@ void event_loop_scheduler() {
      tv.tv_sec = 0;
      tv.tv_usec = 0;
 
-     //Watch fd to see when it has input
+     //our reading set for select
      fd_set rfds;
 
       if (listen(initial_server_fd, 5000) < 0) {
@@ -420,31 +422,37 @@ void event_loop_scheduler() {
               exit(EXIT_FAILURE);
           }
 while(1){
+  //set read list to zero and add main fd and pipe fd to the reading list for selectss
   FD_ZERO(&rfds);
   FD_SET(initial_server_fd, &rfds);
   FD_SET(pipe_fd[0], &rfds);
+  //add/set socket fds to the reading list for select
   for(int i=0; i < 5000; i++){
     if(sockfds[i] != -1){
       FD_SET(sockfds[i], &rfds);
     }
   }
+  //see which fd is available for read
      retval = select(max_fd+1, &rfds, NULL, NULL, &tv);
-     if (retval == -1)
+     if (retval == -1)//couldnt check them
         perror("select()");
 
-    else if (retval){
+    else if (retval){ //some fds are available.
+      //first check for new connection on main fd
       if(FD_ISSET(initial_server_fd, &rfds)){
         struct sockaddr_in in;
         socklen_t sz = sizeof(in);
+        //accept new connection and create its fd
         int new_fd = accept(initial_server_fd, (struct sockaddr_in *)&in, &sz);
         if (new_fd < 0){
           perror("Could not accept connection");
           continue;
         }
-
+        //for select we need the max fd
         if (new_fd > max_fd) max_fd = new_fd;
-
+        ///add the fd to readling list for select
         FD_SET(new_fd, &rfds);
+        //add it to our array of fds for sockets
         for(int i=0; i < 5000; i++){
           if (sockfds[i] ==-1) {
             sockfds[i] = new_fd;
@@ -452,15 +460,16 @@ while(1){
           }
         }
       }
-      //check for pipe fd:
+      //check for pipe fd if available:
       if(FD_ISSET(pipe_fd[0], &rfds)){
         //read from pipe
         //send to cont->fd
         on_read_from_pip();
       }
-      //check for others
+      //check for other connections requests
       for (int i=0; i< 5000; i++){
         if(sockfds[i] != -1){
+          //check if fd is available for read or not
           if(FD_ISSET(sockfds[i], &rfds)){
             //read from it!
             int valread;
@@ -468,7 +477,7 @@ while(1){
             char * req_type = NULL;
             char * req_key = NULL;
             char * req_val = NULL;
-
+            //create a new cont
             temp = (struct continuation *)malloc(sizeof(struct continuation));
             temp->start_time = time(0);
             memset(temp->buffer, 0, MAX_ENTRY_SIZE);
@@ -569,7 +578,7 @@ int main (void)
 
   file = fopen("names.txt", "r+");
 
-  //initilize socket fds:
+  //initilize socket fds for client connections:
   for(int i=0; i< 5000; i++) sockfds[i] = -1;
 
   //Creating I/O thread pool
