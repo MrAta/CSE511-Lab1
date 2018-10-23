@@ -6,8 +6,69 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <math.h>
 #define PORT 8080
+#define N_KEY 1000 //number of unique keys
+#define a 1.25 //parameter for zipf distribution
+#define key_size 16
+#define value_size 100
+long int zeta; //zeta fixed for zipf
+char * keys[N_KEY] = {NULL};
+char * values[N_KEY] = {NULL};
+float popularities[N_KEY];
+float cdf[N_KEY];
+long int calc_zeta(){
+  long float sum = 0.0;
+  for(int i=1; i < N_KEY+1; i++)
+    sum += 1/(pow(i,a));
 
+  return (long int)sum;
+}
+
+void generate_key_values(){
+  for(int i=0; i< N_KEY; i++){
+    char * _key = rand_string_alloc(key_size);
+    keys[i] = _key;
+    char * _value = rand_string_alloc(value_size);
+    values[i] = _value;
+    //TODO: do we need to write them in a file?
+  }
+}
+float zipf(int x, int a, int N){
+  return (1/(pow(x,a)))/zeta;
+}
+void generate_popularities(){
+  for(int i=0; i < N_KEY; i++){
+    popularities[i] = zipf(i+1, a, N);
+  }
+}
+void calc_cdf(){
+  cdf[0] = popularities[0];
+  for(int i=1; i < N_KEY; i++){
+      cdf[i] = cdf[i-1] + popularities[i];
+  }
+}
+static char *rand_string(char *str, size_t size)
+{
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0123456789";
+    if (size) {
+        --size;
+        for (size_t n = 0; n < size; n++) {
+            int key = rand() % (int) (sizeof charset - 1);
+            str[n] = charset[key];
+        }
+        str[size] = '\0';
+    }
+    return str;
+}
+char* rand_string_alloc(size_t size)
+{
+     char *s = malloc(size + 1);
+     if (s) {
+         rand_string(s, size);
+     }
+     return s;
+}
 char *hello[] = {"GET Atajoon"};
 char *mello[] = {"GET Atajoon"};
 
@@ -44,6 +105,10 @@ void *client_func() {
 
 int main(int argc, char const *argv[])
 {
+    generate_key_values();
+    generate_popularities();
+    calc_cdf();
+    
     pthread_t client_thread;
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
