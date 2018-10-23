@@ -11,7 +11,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <pthread.h>
-
+#include <sys/stat.h>
 #include <sys/select.h>
 #include <sys/time.h>
 

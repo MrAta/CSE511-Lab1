@@ -83,19 +83,190 @@ void *io_thread_func() {
   // Complete this function to implement I/O functionality
   // for incoming requests and handle proper synchronization
   // among other helper threads
+  char *req_str = NULL;
+  char *req_type = NULL;
+  char *req_key = NULL;
+  char *req_val = NULL;
+  char *tmp_line = NULL;
+  char *tmp_line_copy = NULL;
+  char *line_key = NULL;
+  char *line_val = NULL;
+  int found = 0;
+  struct stat st;
+  int fsz = 0;
+  char *fbuf = NULL;
+  int fbuf_bytes = 0;
 
   while(1) {
+    pthread_mutex_lock(&lock);
+
     if (pending_head != NULL) {
-      if (pending_head->cont->request_type == 0) {
-       strcpy(pending_head->cont->result, "SAMPLE RESPONSE");
-      } else {
-       strcpy(pending_head->cont->result, "1");
-      }
-      v = (union sigval*) malloc (sizeof(union sigval));
-        v->sival_ptr = pending_head->cont;
-        sigqueue(my_pid, SIGRTMIN+4, *v);
-        pending_head = pending_head->next;
+
+      req_str = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
+      strcpy (req_str, pending_head->cont->buffer);
+      // at this point request in buffer is valid string
+      req_type = strtok(req_str, " ");
+      req_key = strtok(NULL, " ");
+      rewind(file);
+    switch (pending_head->cont->request_type) {
+      case GET:
+        tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+        while(1){
+          if(fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL){
+            line_key = strtok(tmp_line, " ");
+            if(strcmp(line_key, req_key) == 0){
+              //ke in db
+              line_val = strtok(NULL, " ");
+              strncpy(pending_head->cont->result, line_val, strlen(line_val));
+              strncpy(pending_head->cont->result+strlen(line_val), "\0", 1); // copy null byte too
+              break;
+            }else{
+              continue;
+            }
+          }else{
+            strcpy(pending_head->cont->result, "NULL");
+            break;
+          }
+        }
+        free(tmp_line);
+        break;
+      case PUT:
+        req_val = strtok(NULL, "\n");
+        found = 0;
+        tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+        tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+        stat("names.txt", &st);
+        fsz = st.st_size;
+        fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char)); // need enough buffer space for the entire file plus an additional entry assuming the key isnt in the db
+        fbuf_bytes = 0;
+        while(1){
+          if(fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL){
+            memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
+            memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
+            line_key = strtok(tmp_line, " ");
+            if(strcmp(line_key, req_key) == 0){
+              //key in db
+              found = 1;
+              continue;
+            }else{
+              //go to next line
+            memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
+            fbuf_bytes = fbuf_bytes + strlen(tmp_line_copy);
+            continue;
+            }
+          }else{
+            break;
+          }
+        }
+        if(!found){
+          strcpy(pending_head->cont->result, "NULL"); // key not found in db to do put, return NULL, dont update to file
+        }else{
+           // key found in db, add the new k/v to the end of file
+           memcpy(fbuf+fbuf_bytes, req_key, strlen(req_key));
+           memcpy(fbuf+fbuf_bytes+strlen(req_key), " ", 1);
+           memcpy(fbuf+fbuf_bytes+strlen(req_key)+1, req_val, strlen(req_val));
+           memcpy(fbuf+fbuf_bytes+strlen(req_key)+1+strlen(req_val), "\n", 1);
+
+           rewind(file);
+           fwrite(fbuf, sizeof(char), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1, file);
+           fflush(file);
+           ftruncate(fileno(file), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1);
+           strncpy(pending_head->cont->result, "0", sizeof("0"));
+        }
+        free(tmp_line_copy);
+        free(tmp_line);
+        free(fbuf);
+        break;
+      case INSERT:
+                 req_val = strtok(NULL, "\n");
+                 found = 0;
+                 tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+                 tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+                 stat("names.txt", &st);
+                 fsz = st.st_size;
+                 fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char));
+                 fbuf_bytes = 0;
+                 while (1) {
+                   if(fgets(tmp_line, MAX_ENTRY_SIZE, file) !=  NULL) {
+                     memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
+                     memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
+                     line_key = strtok(tmp_line, " ");
+                     if (strcmp(line_key, req_key) == 0) { // found key in db; error
+                       found = 1;
+                       break;
+                     } else { // line key doesnt match search key, go to next line
+                       memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
+                       fbuf_bytes += strlen(tmp_line_copy);
+                       continue;
+                     }
+                   } else { // end of file
+                     break;
+                   }
+                 }
+                 if (found) { // duplicate key error
+                   strcpy(pending_head->cont->result, "NULL");
+                 } else {
+                   // key not found in db, add the new k/v to the end of file
+                   memcpy(fbuf+fbuf_bytes, req_key, strlen(req_key));
+                   memcpy(fbuf+fbuf_bytes+strlen(req_key), " ", 1);
+                   memcpy(fbuf+fbuf_bytes+strlen(req_key)+1, req_val, strlen(req_val));
+                   memcpy(fbuf+fbuf_bytes+strlen(req_key)+1+strlen(req_val), "\n", 1);
+
+                   rewind(file);
+                   fwrite(fbuf, sizeof(char), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1, file);
+                   fflush(file);
+                   ftruncate(fileno(file), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1);
+                   strncpy(pending_head->cont->result, "0", sizeof("0"));
+                 }
+                 free(tmp_line_copy);
+                 free(tmp_line);
+                 free(fbuf);
+                 break;
+      case DELETE:
+          req_val = strtok(NULL, "\n");
+          found = 0;
+          tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
+          stat("names.txt", &st);
+          fsz = st.st_size;
+          fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char));
+          fbuf_bytes = 0;
+          while (1) {
+            if(fgets(tmp_line, MAX_VALUE_SIZE, file) !=  NULL) {
+              memset(tmp_line_copy, 0, MAX_VALUE_SIZE);
+              memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
+              line_key = strtok(tmp_line, " ");
+              if (strcmp(line_key, req_key) == 0) { // found key in db; ignore this line for file rewrite
+                found = 1;
+                continue;
+              } else { // line key doesnt match search key, copy to buffer and go to next line
+                memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
+                fbuf_bytes += strlen(tmp_line_copy);
+                continue;
+              }
+            } else { // must read to end of file
+              break;
+            }
+          }
+          if (!found) {
+            strcpy(pending_head->cont->result, "-1"); // key not found in db to do delete, return -1, dont update to file
+          } else { // key found in db, write fbuf to file without that entry
+            rewind(file);
+            fwrite(fbuf, sizeof(char), fbuf_bytes, file);
+            fflush(file);
+            ftruncate(fileno(file), fbuf_bytes);
+            strncpy(pending_head->cont->result, "0", sizeof("0"));
+          }
+          free(tmp_line_copy);
+          free(tmp_line);
+          free(fbuf);
+          break;
     }
+    //TODO: notify main thread!
+    free(pending_head);
+    pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
+  }
+    pthread_mutex_unlock(&lock);
   }
 }
 
@@ -196,8 +367,8 @@ while(1){
     else if (retval){
       if(FD_ISSET(initial_server_fd, &rfds)){
         struct sockaddr_in in;
-        socketlen_t sz = sizeof(in);
-        int new_fd = accept(initial_server_fd, (struct address *)&in, &sz);
+        socklen_t sz = sizeof(in);
+        int new_fd = accept(initial_server_fd, (struct sockaddr_in *)&in, &sz);
         if (new_fd < 0){
           perror("Could not accept connection");
           continue;
@@ -208,7 +379,7 @@ while(1){
         FD_SET(new_fd, &rfds);
         for(int i=0; i < 5000; i++){
           if (sockfds[i] ==-1) {
-            sockfds[i] = new_fds;
+            sockfds[i] = new_fd;
             break;
           }
         }
@@ -333,7 +504,7 @@ int main (void)
   file = fopen("names.txt", "r+");
 
   //initilize socket fds:
-  for(int i=0; i< 5000) sockfds[i] = -1;
+  for(int i=0; i< 5000; i++) sockfds[i] = -1;
 
   //Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
