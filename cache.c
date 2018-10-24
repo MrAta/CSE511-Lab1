@@ -73,9 +73,9 @@ void cache_invalidate(char *key) {
     if(head->next != NULL){
       head->next->prev = NULL;
       head = head->next;
-      free(curr);  
-    }
 
+    }
+  free(curr);
   }
 }
 

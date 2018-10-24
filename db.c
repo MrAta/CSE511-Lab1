@@ -36,7 +36,7 @@ int db_get(char *key, char **ret_buf, int *ret_len) {
       }
       continue;
     } else { // end of file (or other error reading); didnt find key
-      strcpy(*ret_buf, "KEY NOT FOUND");
+      strcpy(*ret_buf, "NOTFOUND");
       *ret_len = 13;
       free(tmp_line);
       rewind(file);
@@ -54,7 +54,7 @@ int db_insert(char *key, char *value, char **ret_buf, int *ret_len) {
   found = db_search(key, &fbuf, &fbuf_bytes);
 
   if (found) { // duplicate key error
-    strcpy(*ret_buf, "DUPLICATE KEY");
+    strcpy(*ret_buf, "DUPLICATE");
     *ret_len = 13;
     free(fbuf);
     return EXIT_FAILURE;
@@ -84,7 +84,7 @@ int db_put(char *key, char *value, char **ret_buf, int *ret_len) {
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   found = db_search(key, &fbuf, &fbuf_bytes);
   if (!found) {
-    strcpy(*ret_buf, "ILLEGAL KEY"); // key not found in db to do put, return NULL, dont update to file
+    strcpy(*ret_buf, "NOTFOUND"); // key not found in db to do put, return NULL, dont update to file
     *ret_len = 11;
     free(fbuf);
     fbuf = NULL;
@@ -116,7 +116,7 @@ int db_delete(char *key, char **ret_buf, int *ret_len) {
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   found = db_search(key, &fbuf, &fbuf_bytes);
   if (!found) {
-    strcpy(*ret_buf, "ILLEGAL KEY");
+    strcpy(*ret_buf, "NOTFOUND");
     *ret_len = 11;
     free(fbuf);
     pthread_mutex_unlock(&db_mutex);
