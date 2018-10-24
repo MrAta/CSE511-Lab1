@@ -34,4 +34,4 @@ client5: client5.c
 	gcc -g -std=gnu99 client5.c -o client5 -pthread
 
 clean:
-	rm server client client2 client3 client4 client5
+	rm server client client2 client3 client4 client5 *.o

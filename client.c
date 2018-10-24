@@ -17,8 +17,32 @@ char * keys[N_KEY] = {NULL};
 char * values[N_KEY] = {NULL};
 float popularities[N_KEY];
 float cdf[N_KEY];
+
+
+static char *rand_string(char *str, size_t size)
+{
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0123456789";
+    if (size) {
+        --size;
+        for (size_t n = 0; n < size; n++) {
+            int key = rand() % (int) (sizeof charset - 1);
+            str[n] = charset[key];
+        }
+        str[size] = '\0';
+    }
+    return str;
+}
+char* rand_string_alloc(size_t size)
+{
+     char *s = malloc(size + 1);
+     if (s) {
+         rand_string(s, size);
+     }
+     return s;
+}
+
 long int calc_zeta(){
-  long float sum = 0.0;
+   float sum = 0.0;
   for(int i=1; i < N_KEY+1; i++)
     sum += 1/(pow(i,a));
 
@@ -47,27 +71,6 @@ void calc_cdf(){
   for(int i=1; i < N_KEY; i++){
       cdf[i] = cdf[i-1] + popularities[i];
   }
-}
-static char *rand_string(char *str, size_t size)
-{
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0123456789";
-    if (size) {
-        --size;
-        for (size_t n = 0; n < size; n++) {
-            int key = rand() % (int) (sizeof charset - 1);
-            str[n] = charset[key];
-        }
-        str[size] = '\0';
-    }
-    return str;
-}
-char* rand_string_alloc(size_t size)
-{
-     char *s = malloc(size + 1);
-     if (s) {
-         rand_string(s, size);
-     }
-     return s;
 }
 char *hello[] = {"GET Atajoon"};
 char *mello[] = {"GET Atajoon"};
@@ -108,7 +111,7 @@ int main(int argc, char const *argv[])
     generate_key_values();
     generate_popularities();
     calc_cdf();
-    
+
     pthread_t client_thread;
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
