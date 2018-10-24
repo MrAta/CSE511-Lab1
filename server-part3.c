@@ -1,9 +1,9 @@
-#include "server-part2.h"
+#include "server-part3.h"
+
 volatile sig_atomic_t usr_interrupt = 0;
 pthread_mutex_t lock;
 
-
-void *io_thread_func() {
+void *io_thread_func_3() {
   char *req_str = NULL;
   char *req_key = NULL;
   char *req_val = NULL;
@@ -90,7 +90,7 @@ void setup_request_type(char *s, char **tec) {
   This func is only executed by the main thread, and appends a task to the back of the
   task queue
 */
-void issue_io_req() {
+void issue_io_req_3() {
   pthread_mutex_lock(&lock);
   pending_node = (struct pending_queue *) malloc(sizeof(struct pending_queue));
   pending_node->cont = temp;
@@ -104,7 +104,7 @@ void issue_io_req() {
   pthread_mutex_unlock(&lock);
 }
 
-static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
+static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
   int valread, incoming;
   char *req_string;
   char *req_type = NULL;
@@ -154,7 +154,7 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
       // TODO: update timings
       send(temp->fd, temp->result, strlen(temp->result), 0);
     } else { // not in cache, check db
-      issue_io_req();
+      issue_io_req_3();
     }
   } else if (temp->request_type == PUT) {
     if (( req_val = strtok(NULL, " ")) == NULL) {
@@ -165,7 +165,7 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
       free(req_string);
       return;
     }
-    issue_io_req();
+    issue_io_req_3();
   } else if (temp->request_type == INSERT) {
     if (( req_val = strtok(NULL, " ")) == NULL) {
       printf("%s\n", "bad client request: req_val");
@@ -184,9 +184,9 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
       free(req_string);
       return;
     }
-    issue_io_req(); // if not in cache, still might be in db
+    issue_io_req_3(); // if not in cache, still might be in db
   } else if (temp->request_type == DELETE) {
-    issue_io_req(); // issue io request to find out if req_key is in db to delete
+    issue_io_req_3(); // issue io request to find out if req_key is in db to delete
   } else {
     // TODO: update timings
     send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
@@ -199,7 +199,7 @@ static void incoming_connection_handler(int sig, siginfo_t *si, void *data) {
   free(req_string);
 }
 
-static void outgoing_data_handler(int sig, siginfo_t *si, void *data) {
+static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
 
   // update time measurements and cache in this func
 
@@ -243,7 +243,7 @@ static void outgoing_data_handler(int sig, siginfo_t *si, void *data) {
   free(req_cont); // frees the cont that was just executed
 }
 
-static int make_socket_non_blocking(int sfd) {
+static int make_socket_non_blocking_3(int sfd) {
   int flags, s;
 
   flags = fcntl(sfd, F_GETFL, 0);
@@ -261,7 +261,7 @@ static int make_socket_non_blocking(int sfd) {
   return 0;
 }
 
-int server_func() {
+int server_func_3() {
   int server_fd, opt;
 
   // Creating socket file descriptor
@@ -290,8 +290,8 @@ int server_func() {
   return server_fd;
 }
 
-void event_loop_scheduler() {
-  initial_server_fd = server_func();
+void event_loop_scheduler_3() {
+  initial_server_fd = server_func_3();
   int fl;
 
   fl = fcntl(initial_server_fd, F_GETFL);
@@ -321,24 +321,23 @@ int run_server_3(void) {
 
 //  file = fopen("names.txt", "r+");
 
-  act.sa_sigaction = incoming_connection_handler;
+  act.sa_sigaction = incoming_connection_handler_3;
   sigemptyset(&act.sa_mask);
   act.sa_flags = SA_SIGINFO;
-  sigaction (SIGRTMIN
-  +3, &act, NULL);
+  sigaction(SIGRTMIN + 3, &act, NULL);
 
-  react.sa_sigaction = outgoing_data_handler;
+  react.sa_sigaction = outgoing_data_handler_3;
   sigemptyset(&react.sa_mask);
   react.sa_flags = SA_SIGINFO;
-  sigaction (SIGRTMIN
-  +4, &react, NULL);
+  sigaction(SIGRTMIN
+            + 4, &react, NULL);
 
   // Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
-    pthread_create(&io_thread[i], NULL, io_thread_func, NULL);
+    pthread_create(&io_thread[i], NULL, io_thread_func_3, NULL);
   }
 
-  event_loop_scheduler();
+  event_loop_scheduler_3();
 
   return 0;
 }
