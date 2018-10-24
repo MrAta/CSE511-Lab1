@@ -12,7 +12,7 @@
 #include <sys/epoll.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <sys/select.h>
+#include <sys/epoll.h>
 #include <sys/time.h>
 #include "cache.h"
 #include "db.h"
@@ -56,11 +56,6 @@ struct pending_queue {
   struct pending_queue *next;
 }*pending_head, *pending_tail, *pending_node;
 
-struct node {
-  char *name;
-  char *defn;
-  struct node *next, *prev;
-}*head,*tail,*curr,*temp_node;
 
 struct sockaddr_in address;
 pthread_t io_thread[THREAD_POOL_SIZE];
