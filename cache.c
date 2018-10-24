@@ -2,7 +2,7 @@
 // Created by sps5394 on 10/18/18.
 //
 #include "cache.h"
-
+int global_cache_count = 0;
 struct node* cache_get(char *s) {
   curr = head;
   while (curr != NULL) {
@@ -53,9 +53,9 @@ void cache_put (char *name, char *defn) {
       // cache is full, evict the last node
       // insert a new node in the list
       tail = tail->prev;
+      free(tail->next);
       tail->next = NULL;
 
-      //TODO: Free the memory as you evict nodes
     } else {
       // Increase the count
       global_cache_count++;
@@ -63,6 +63,16 @@ void cache_put (char *name, char *defn) {
   } else {
     // update cache entry
     cache_entry->defn = strdups(defn);
+  }
+}
+
+void cache_invalidate(char *key) {
+  node *temp_node;
+  if (( temp_node = cache_get(key)) != NULL) { // if in cache, delete it
+    curr = head;
+    head->next->prev = NULL;
+    head = head->next;
+    free(curr);
   }
 }
 

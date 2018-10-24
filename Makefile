@@ -1,25 +1,19 @@
-all: server server_new client client2 client3 client4
+all: server client client2 client3 client4 client5
 
-server: server.c server.h
-	gcc -g -std=gnu99 server.c server.h -o server -pthread
+server: server-part2 server-part1 deps
+	gcc -g -c -std=gnu99 server-main.c -o server-main.o -pthread
+	gcc -g -std=gnu99 server-main.o server-part1.o server-part2.o db.o cache.o -o server -pthread
 
-CFLAGS = -c -std=gnu99 -Wall -pthread -ggdb
-LFLAGS = -std=gnu99 -Wall -ggdb
-CC = gcc
-DEPS = db.o cache.o
-SERVERS = server_main.o
-SERVERS += server-part1.o
-#SERVERS += server-part2.c
-#SERVERS += server-part3.c
+server-part2:
+	gcc -g -c -std=gnu99 server-part2.c -o server-part2.o -pthread
 
-server_new: $(SERVERS) $(DEPS)
-	$(CC) $(LFLAGS) $^ -o $@
+server-part1:
+	gcc -g -c -std=gnu99 server-part1.c -o server-part1.o -pthread
 
-server_main.o: server_main.c
-	$(CC) $(CFLAGS) $< -o $@
+deps:
+	gcc -g -c -std=gnu99 db.c -o db.o
+	gcc -g -c -std=gnu99 cache.c -o cache.o
 
-%.o: %.c
-	$(CC) $(CFLAGS) $^ -o $@
 
 client: client.c
 	gcc -g -std=gnu99 client.c -o client -pthread
@@ -33,7 +27,10 @@ client3: client3.c
 client4: client4.c
 	gcc -g -std=gnu99 client4.c -o client4 -pthread
 
+client5: client5.c
+	gcc -g -std=gnu99 client5.c -o client5 -pthread
+
 clean:
-	rm server client client2 client3 client4 *.o server_new
+	rm server client client2 client3 client4 client5
 
 

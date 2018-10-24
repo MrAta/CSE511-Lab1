@@ -3,6 +3,7 @@
 //
 #include "server-part1.h"
 
+struct sockaddr_in address;
 
 int server_1_get_request(char *key, char **ret_buffer, int *ret_size) {
   //
@@ -29,7 +30,7 @@ int server_1_get_request(char *key, char **ret_buffer, int *ret_size) {
     return EXIT_FAILURE;
   }
   cache_put(key, *ret_buffer);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 int server_1_put_request(char *key, char *value, char **ret_buffer, int *ret_size) {
@@ -38,40 +39,65 @@ int server_1_put_request(char *key, char *value, char **ret_buffer, int *ret_siz
     return EXIT_FAILURE;
   }
   cache_put(key, value);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
+int server_1_insert_request(char *key, char *value, char **ret_buffer, int *ret_size) {
+  // Always perform IO
+  if (db_insert(key, value, ret_buffer, ret_size)) {
+    return EXIT_FAILURE;
+  }
+  cache_put(key, value);
+  return EXIT_SUCCESS;
+}
+
+int server_1_delete_request(char *key, char **ret_buffer, int *ret_size) {
+  // Always perform IO
+  if (db_delete(key, ret_buffer, ret_size)) {
+    return EXIT_FAILURE;
+  }
+  cache_invalidate(key);
+  return EXIT_SUCCESS;
+}
 
 void *server_handler(void *arg) {
-  int sockfd = *(int *)arg;
-  char * input_line = (char *) calloc(1024, sizeof(char *));
-  char *tokens, *response;
+  db_connect();
+  int sockfd = *(int *) arg;
+  char *input_line = (char *) calloc(1024, sizeof(char *));
+  char *tokens, *response = NULL, *key, *value;
   int response_size;
   read(sockfd, input_line, 1024);
 
   tokens = strtok(input_line, " ");
+  key = strtok(NULL, " ");
+  value = strtok(NULL, " ");
   if (strncmp(tokens, "GET", 3) == 0) {
-    if (server_1_get_request(strtok(NULL, " "), &response, &response_size)) {
-      write(sockfd, "ERROR", 6);
-      return NULL;
-    }
+    server_1_get_request(key, &response, &response_size);
     write(sockfd, response, (size_t) response_size);
-    return NULL;
+  } else if (strncmp(tokens, "PUT", 3) == 0) {
+    server_1_put_request(key, value, &response, &response_size);
+    write(sockfd, response, (size_t) response_size);
+  } else if (strncmp(tokens, "INSERT", 6) == 0) {
+    server_1_insert_request(key, value, &response, &response_size);
+    write(sockfd, response, (size_t) response_size);
+  } else if (strncmp(tokens, "DELETE", 6) == 0) {
+    server_1_delete_request(key, &response, &response_size);
+    write(sockfd, response, (size_t) response_size);
   } else {
-    if (server_1_put_request(strtok(NULL, " "), strtok(NULL, " "), &response, &response_size)) {
-      write(sockfd, "ERROR", 6);
-      return NULL;
-    }
-    write(sockfd, response, (size_t) response_size);
-    return NULL;
+    write(sockfd, "ERROR", 6);
   }
+  db_cleanup();
+  if (response != NULL) {
+    free(response);
+  }
+  return NULL;
 }
 
 int create_server_1() {
-  int server_fd;
+  int server_fd, opt;
 
   // Creating socket file descriptor
-  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+  if (( server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
     perror("socket failed");
     exit(EXIT_FAILURE);
   }
@@ -84,11 +110,11 @@ int create_server_1() {
   }
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons( PORT );
+  address.sin_port = htons(PORT);
 
   // Forcefully attaching socket to the port 8080
-  if (bind(server_fd, (struct sockaddr *)&address,
-           sizeof(address))<0) {
+  if (bind(server_fd, (struct sockaddr *) &address,
+           sizeof(address)) < 0) {
     perror("bind failed");
     exit(EXIT_FAILURE);
   }
@@ -99,12 +125,13 @@ int create_server_1() {
 int loop_and_listen_1() {
   int sock_fd = create_server_1();
   if (listen(sock_fd, QUEUED_CONNECTIONS) != 0) {
-    perror("listed failed");
+    perror("listen failed");
     return EXIT_FAILURE;
   }
 
   while (1) {
-    int newsockfd = accept(sock_fd, (struct sockaddr *)&address, (socklen_t *) sizeof(address));
+    socklen_t cli_addr_size = sizeof(address);
+    int newsockfd = accept(sock_fd, (struct sockaddr *) &address, &cli_addr_size);
     if (newsockfd < 0) {
       perror("Could not accept connection");
       continue;
@@ -121,8 +148,6 @@ int loop_and_listen_1() {
 int run_server_1() {
   // Load database
   head = tail = curr = temp_node = NULL;
-
-  db_init();
 
   if (loop_and_listen_1()) {
     return EXIT_FAILURE;

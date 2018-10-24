@@ -4,6 +4,7 @@
 
 #ifndef P1_CSRF_SERVER_PART1_H
 #define P1_CSRF_SERVER_PART1_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,12 +18,11 @@
 #include "db.h"
 
 #define PORT 8080
-#define QUEUED_CONNECTIONS 10
+#define QUEUED_CONNECTIONS 5
 
 #define CACHE_SIZE 101
 
-struct sockaddr_in address;
-int opt = 1;
+extern struct sockaddr_in address;
 
 /**
  * The loop for the server. Continuously loops
@@ -60,5 +60,24 @@ int server_1_put_request(char *key, char *value, char **ret_buffer, int *ret_siz
  * @return 0 if success 1 if failure
  */
 int server_1_get_request(char *key, char **ret_buffer, int *ret_size);
+
+/**
+ * Handles the DELETE request on the server
+ * @param key Key as parsed from the request
+ * @param ret_buffer char **, allocates and returns the data read from the DB
+ * @param ret_size int *, the size of the read data
+ * @return 0 if success 1 if failure
+ */
+int server_1_delete_request(char *key, char **ret_buffer, int *ret_size);
+
+/**
+ * Handles the INSERT request on the server
+ * @param key Key as parsed from the request
+ * @param value Value to put as part of the key
+ * @param ret_buffer char **, allocates and returns if any data is to be returned
+ * @param ret_size int *, the size of the buffer returned, 0 otherwise
+ * @return 0 is success 1 if failure
+ */
+int server_1_insert_request(char *key, char *value, char **ret_buffer, int *ret_size);
 
 #endif //P1_CSRF_SERVER_PART1_H

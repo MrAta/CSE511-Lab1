@@ -9,7 +9,7 @@
 #define CACHE_SIZE 101
 
 /********** GLOBAL DATA ***********/
-int global_cache_count = 0;
+extern int global_cache_count;
 
 struct node {
   char *name;
@@ -39,5 +39,11 @@ struct node *cache_get(char *s);
  * @param defn The value for the provided key
  */
 void cache_put (char *name, char *defn);
+
+/**
+ * Removes the specified key from the cache
+ * @param name The key to remove
+ */
+void cache_invalidate(char *key);
 
 #endif //P1_CSRF_CACHE_H

@@ -5,3 +5,9 @@ CMakeLists.txt
 cmake-build-debug/
 tastarter/server
 tastarter/server_new
+client
+client2
+client3
+client4
+client5
+server
