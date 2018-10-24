@@ -8,9 +8,9 @@
 #include <pthread.h>
 #define PORT 8080
 
-char *hello[] = {"GET Sheree"};
-char *mello[] = {"DELETE Sheree"};
-char *cello[] = {"GET Sheree"};
+char *hello[] = {"GET Fay"};
+char *mello[] = {"DELETE Fay"};
+char *cello[] = {"GET Fay"};
 struct sockaddr_in *serv_addr;
 
 void *client_func() {

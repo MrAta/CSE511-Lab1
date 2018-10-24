@@ -214,25 +214,25 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
 
   if (req_cont->request_type == GET) {
     // TODO: update time measurements
-    if (strcmp(req_cont->result, "NULL") != 0) { // if result was NULL there was some kind of error
+    if (strcmp(req_cont->result, "NOTFOUND") != 0) { // if result was NULL there was some kind of error
       cache_put(req_key, req_cont->result);
     }
   } else if (req_cont->request_type == PUT) {
     // TODO: update time measurements
-    if (strcmp(req_cont->result, "NULL") != 0) {
+    if (strcmp(req_cont->result, "NOTFOUND") != 0) {
       val = strtok(NULL, " ");
       cache_put(req_key, val);
     }
 
   } else if (req_cont->request_type == INSERT) {
     // TODO: update time measurements
-    if (strcmp(req_cont->result, "NULL") != 0) {
+    if (strcmp(req_cont->result, "DUPLICATE") != 0) {
       val = strtok(NULL, " ");
       cache_put(req_key, val);
     }
   } else { // DELETE
     // TODO: update time measurements
-    if (strcmp(req_cont->result, "NULL") != 0) {
+    if (strcmp(req_cont->result, "NOTFOUND") != 0) {
       cache_invalidate(req_key);
     }
   }
