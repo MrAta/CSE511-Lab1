@@ -19,7 +19,7 @@ deps:
 
 
 client: client.c
-	gcc -g -std=gnu99 client.c -o client -pthread
+	gcc -g -std=gnu99 client.c -o client -pthread -lm
 
 client2: client2.c
 	gcc -g -std=gnu99 client2.c -o client2 -pthread

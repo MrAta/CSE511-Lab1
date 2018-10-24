@@ -58,12 +58,12 @@ void generate_key_values(){
     //TODO: do we need to write them in a file?
   }
 }
-float zipf(int x, int a, int N){
+float zipf(int x){
   return (1/(pow(x,a)))/zeta;
 }
 void generate_popularities(){
   for(int i=0; i < N_KEY; i++){
-    popularities[i] = zipf(i+1, a, N);
+    popularities[i] = zipf(i+1);
   }
 }
 void calc_cdf(){
