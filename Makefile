@@ -1,6 +1,6 @@
 all: server client client2 client3 client4 client5
 
-server: server-part2 server-part1 deps
+server: server-part3 server-part2 server-part1 deps
 	gcc -g -c -std=gnu99 server-main.c -o server-main.o -pthread
 	gcc -g -std=gnu99 server-main.o server-part1.o server-part2.o server-part3.o db.o cache.o -o server -pthread
 

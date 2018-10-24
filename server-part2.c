@@ -59,7 +59,7 @@ void *io_thread_func() {
       v = (union sigval *) malloc(sizeof(union sigval));
       v->sival_ptr = pending_head->cont;
       sigqueue(my_pid, SIGRTMIN + 4, *v); // send signal to main thread
-      node *dead_head = pending_head;
+      struct pending_queue *dead_head = pending_head;
       pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
       free(dead_head);
       free(db_get_val);

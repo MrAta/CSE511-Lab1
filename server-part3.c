@@ -314,7 +314,7 @@ nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
          //perfom the request:
 
            if (temp->request_type == GET) {
-             if ((temp_node = get(req_key)) != NULL) { // check cache
+             if ((temp_node = cache_get(req_key)) != NULL) { // check cache
                printf("\nGET result found in cache\n\n");
                strcpy(temp->result, temp_node->defn);
                send(temp->fd, temp->result, strlen(temp->result), 0);
@@ -337,7 +337,7 @@ nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
                free(req_string);
                continue;
              }
-             if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
+             if ((temp_node = cache_get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
                printf("%s\n", "error: duplicate req_key violation");
                free(req_string);
                continue;

@@ -55,7 +55,12 @@ struct pending_queue {
   struct continuation* cont;
   struct pending_queue *next;
 }*pending_head, *pending_tail, *pending_node;
-
+//
+// struct node {
+//   char *name;
+//   char *defn;
+//   struct node *next, *prev;
+// }*head,*tail,*curr,*temp_node;
 
 struct sockaddr_in address;
 pthread_t io_thread[THREAD_POOL_SIZE];
