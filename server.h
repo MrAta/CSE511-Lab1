@@ -12,7 +12,7 @@
 #include <sys/epoll.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <sys/select.h>
+#include <sys/epoll.h>
 #include <sys/time.h>
 
 #define SIGUNUSED   31

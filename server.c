@@ -1,5 +1,5 @@
 #include "server.h"
-int sockfds[5000];
+#define MAX_EVENTS 5000
 int max_fd = 0;
 pthread_mutex_t lock;
 int max (int a, int b) {
@@ -400,169 +400,156 @@ void event_loop_scheduler() {
       perror("pipe");
       exit(EXIT_FAILURE);
     }
-    if(pipe_fd[0] > max_fd){
-      max_fd = pipe_fd[0];
-    }
+
     //creating main thread fd
     initial_server_fd = server_func();
-    if (initial_server_fd > max_fd){
-      max_fd = initial_server_fd;
-    }
+
      int retval;
-     //according to manpage, timeout should be 0 for polling
-     struct timeval tv;
-     tv.tv_sec = 0;
-     tv.tv_usec = 0;
-
      //our reading set for select
-     fd_set rfds;
-
+     struct epoll_event ev, events[MAX_EVENTS];
+     int nfds, epollfd;
       if (listen(initial_server_fd, 5000) < 0) {
               perror("listen");
               exit(EXIT_FAILURE);
           }
-while(1){
-  //set read list to zero and add main fd and pipe fd to the reading list for selectss
-  FD_ZERO(&rfds);
-  FD_SET(initial_server_fd, &rfds);
-  FD_SET(pipe_fd[0], &rfds);
-  //add/set socket fds to the reading list for select
-  for(int i=0; i < 5000; i++){
-    if(sockfds[i] != -1){
-      FD_SET(sockfds[i], &rfds);
+
+    epollfd = epoll_create1(0);
+    if (epollfd == -1) {
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
     }
-  }
-  //see which fd is available for read
-     retval = select(max_fd+1, &rfds, NULL, NULL, &tv);
-     if (retval == -1)//couldnt check them
-        perror("select()");
 
-    else if (retval){ //some fds are available.
-      //first check for new connection on main fd
-      if(FD_ISSET(initial_server_fd, &rfds)){
-        struct sockaddr_in in;
-        socklen_t sz = sizeof(in);
-        //accept new connection and create its fd
-        int new_fd = accept(initial_server_fd, (struct sockaddr_in *)&in, &sz);
-        if (new_fd < 0){
-          perror("Could not accept connection");
-          continue;
-        }
-        //for select we need the max fd
-        if (new_fd > max_fd) max_fd = new_fd;
-        ///add the fd to readling list for select
-        FD_SET(new_fd, &rfds);
-        //add it to our array of fds for sockets
-        for(int i=0; i < 5000; i++){
-          if (sockfds[i] ==-1) {
-            sockfds[i] = new_fd;
-            break;
-          }
-        }
-      }
-      //check for pipe fd if available:
-      if(FD_ISSET(pipe_fd[0], &rfds)){
-        //read from pipe
-        //send to cont->fd
-        on_read_from_pip();
-      }
-      //check for other connections requests
-      for (int i=0; i< 5000; i++){
-        if(sockfds[i] != -1){
-          //check if fd is available for read or not
-          if(FD_ISSET(sockfds[i], &rfds)){
-            //read from it!
-            int valread;
-            char * req_string;
-            char * req_type = NULL;
-            char * req_key = NULL;
-            char * req_val = NULL;
-            //create a new cont
-            temp = (struct continuation *)malloc(sizeof(struct continuation));
-            temp->start_time = time(0);
-            memset(temp->buffer, 0, MAX_ENTRY_SIZE);
+    ev.events = EPOLLIN;
+    ev.data.fd = initial_server_fd;
 
-            valread = read(sockfds[i], temp->buffer, MAX_ENTRY_SIZE);
-            req_string = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
-            strcpy (req_string, temp->buffer);
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, initial_server_fd, &ev) == -1) {
+        perror("epoll_ctl: listen_sock");
+        exit(EXIT_FAILURE);
+    }
 
-            memset(temp->result, 0, MAX_ENTRY_SIZE);
-            temp->fd = sockfds[i];
+    ev.events = EPOLLIN;
+    ev.data.fd = pipe_fd[0];
 
-            if ((req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
-              // TODO: update timings since we send directly here (and below)
-              free(req_string);
-              continue;
-            }
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, pipe_fd[0], &ev) == -1) {
+        perror("epoll_ctl: listen_sock");
+        exit(EXIT_FAILURE);
+    }
+while(1){
 
-            //checking reques type
-            if (strcmp(req_type, "GET") == 0) {
-               temp->request_type = GET;
-             } else if (strcmp(req_type, "PUT") == 0) {
-               temp->request_type = PUT;
-             } else if (strcmp(req_type, "INSERT") == 0) {
-               temp->request_type = INSERT;
-             } else if (strcmp(req_type, "DELETE") == 0) {
-               temp->request_type = DELETE;
-             } else {
-               temp->request_type = INVALID;
-            }
+  nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+   if (nfds == -1) {
+       perror("epoll_wait");
+       exit(EXIT_FAILURE);
+   }
 
-            //set the key
-          if ((req_key = strtok(NULL, " ")) == NULL) {
+    for (int i = 0; i < nfds; i++){
+            if (events[i].data.fd == initial_server_fd){
+              struct sockaddr_in in;
+              socklen_t sz = sizeof(in);
+              //accept new connection and create its fd
+              int new_fd = accept(initial_server_fd, (struct sockaddr_in *)&in, &sz);
+              if (new_fd < 0){
+                perror("Could not accept connection");
+                continue;
+              }
+              //setnonblocking(new_fd);
+           ev.events = EPOLLIN | EPOLLET;
+           ev.data.fd = new_fd;
+           if (epoll_ctl(epollfd, EPOLL_CTL_ADD, new_fd,
+                       &ev) == -1) {
+               perror("epoll_ctl: conn_sock");
+               exit(EXIT_FAILURE);
+           }
+
+         } else if(events[i].data.fd == pipe_fd[0]){
+           on_read_from_pip();
+         }
+         else{
+           //read from it!
+           int valread;
+           char * req_string;
+           char * req_type = NULL;
+           char * req_key = NULL;
+           char * req_val = NULL;
+           //create a new cont
+           temp = (struct continuation *)malloc(sizeof(struct continuation));
+           temp->start_time = time(0);
+           memset(temp->buffer, 0, MAX_ENTRY_SIZE);
+
+           valread = read(events[i].data.fd, temp->buffer, MAX_ENTRY_SIZE);
+           req_string = (char *)malloc(MAX_ENTRY_SIZE*sizeof(char));
+           strcpy (req_string, temp->buffer);
+
+           memset(temp->result, 0, MAX_ENTRY_SIZE);
+           temp->fd = events[i].data.fd;
+
+           if ((req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
+             // TODO: update timings since we send directly here (and below)
              free(req_string);
              continue;
-          }
+           }
 
-            //perfom the request:
+           //checking reques type
+           if (strcmp(req_type, "GET") == 0) {
+              temp->request_type = GET;
+            } else if (strcmp(req_type, "PUT") == 0) {
+              temp->request_type = PUT;
+            } else if (strcmp(req_type, "INSERT") == 0) {
+              temp->request_type = INSERT;
+            } else if (strcmp(req_type, "DELETE") == 0) {
+              temp->request_type = DELETE;
+            } else {
+              temp->request_type = INVALID;
+           }
 
-              if (temp->request_type == GET) {
-                if ((temp_node = get(req_key)) != NULL) { // check cache
-                  printf("\nGET result found in cache\n\n");
-                  strcpy(temp->result, temp_node->defn);
-                  send(temp->fd, temp->result, strlen(temp->result), 0);
+           //set the key
+         if ((req_key = strtok(NULL, " ")) == NULL) {
+            free(req_string);
+            continue;
+         }
 
-                } else { // not in cache, check db
-                  issue_io_req();
-                }
-            }
-            else if (temp->request_type == PUT) {
-                if ((req_val = strtok(NULL, " ")) == NULL) {
-                  printf("%s\n", "bad client request: req_val");
-                  free(req_string);
-                  continue;
-                }
-                issue_io_req();
-            }
-            else if (temp->request_type == INSERT) {
-                if ((req_val = strtok(NULL, " ")) == NULL) {
-                  printf("%s\n", "bad client request: req_val");
-                  free(req_string);
-                  continue;
-                }
-                if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
-                  printf("%s\n", "error: duplicate req_key violation");
-                  free(req_string);
-                  continue;
-                }
-                issue_io_req(); // if not in cache, still might be in db
-                }
-                else if (temp->request_type == DELETE) {
-                issue_io_req(); // issue io request to find out if req_key is in db to delete
-              } else {
-                free(req_string);
-                continue;
-                }
+           //perfom the request:
 
-          }
-        }
+             if (temp->request_type == GET) {
+               if ((temp_node = get(req_key)) != NULL) { // check cache
+                 printf("\nGET result found in cache\n\n");
+                 strcpy(temp->result, temp_node->defn);
+                 send(temp->fd, temp->result, strlen(temp->result), 0);
+
+               } else { // not in cache, check db
+                 issue_io_req();
+               }
+           }
+           else if (temp->request_type == PUT) {
+               if ((req_val = strtok(NULL, " ")) == NULL) {
+                 printf("%s\n", "bad client request: req_val");
+                 free(req_string);
+                 continue;
+               }
+               issue_io_req();
+           }
+           else if (temp->request_type == INSERT) {
+               if ((req_val = strtok(NULL, " ")) == NULL) {
+                 printf("%s\n", "bad client request: req_val");
+                 free(req_string);
+                 continue;
+               }
+               if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
+                 printf("%s\n", "error: duplicate req_key violation");
+                 free(req_string);
+                 continue;
+               }
+               issue_io_req(); // if not in cache, still might be in db
+               }
+               else if (temp->request_type == DELETE) {
+               issue_io_req(); // issue io request to find out if req_key is in db to delete
+             } else {
+               free(req_string);
+               continue;
+               }
+         }
+
       }
-
-    }// end of if retavl is a good value!
-    else{
-      continue;
-    }
-
 } //end of while loop
     exit(EXIT_SUCCESS);
 
@@ -579,7 +566,7 @@ int main (void)
   file = fopen("names.txt", "r+");
 
   //initilize socket fds for client connections:
-  for(int i=0; i< 5000; i++) sockfds[i] = -1;
+  // for(int i=0; i< 5000; i++) sockfds[i] = -1;
 
   //Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
