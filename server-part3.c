@@ -1,6 +1,5 @@
 #include "server-part3.h"
 
-volatile sig_atomic_t usr_interrupt = 0;
 pthread_mutex_t lock;
 
 void *io_thread_func_3() {

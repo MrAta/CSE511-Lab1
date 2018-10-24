@@ -25,7 +25,6 @@
 #define DELETE 3
 
 /* When a SIGUSR1 signal arrives, set this variable. */ // ???
-extern volatile sig_atomic_t usr_interrupt;
 
 struct continuation {
   int request_type;

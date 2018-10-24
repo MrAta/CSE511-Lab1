@@ -1,6 +1,5 @@
 #include "server-part2.h"
 
-volatile sig_atomic_t usr_interrupt = 0;
 #define MAX_EVENTS 5000
 int max_fd = 0;
 int addrlen, opt = 1;
