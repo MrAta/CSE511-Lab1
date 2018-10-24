@@ -131,6 +131,7 @@ void on_read_from_pipe_2() {
   } else { // DELETE
     // TODO: update time measurements
     if (strcmp(req_cont->result, "NULL") != 0) {
+      
       cache_invalidate(req_key);
     }
   }

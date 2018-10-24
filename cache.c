@@ -70,9 +70,12 @@ void cache_invalidate(char *key) {
   struct node *temp_node;
   if (( temp_node = cache_get(key)) != NULL) { // if in cache, delete it
     curr = head;
-    head->next->prev = NULL;
-    head = head->next;
-    free(curr);
+    if(head->next != NULL){
+      head->next->prev = NULL;
+      head = head->next;
+      free(curr);  
+    }
+
   }
 }
 
