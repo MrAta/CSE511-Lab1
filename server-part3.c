@@ -1,4 +1,4 @@
-#include "server.h"
+#include "server-part3.h"
 int sockfds[5000];
 int max_fd = 0;
 pthread_mutex_t lock;
@@ -12,69 +12,6 @@ char *strdups(char *s) {/* make a duplicate of s */
     if (p != NULL)
        strcpy(p, s);
     return p;
-}
-
-struct node* get (char *s) {
-  curr = head;
-  while (curr != NULL) {
-    if (strcmp(curr->name, s) == 0) {
-      //found in cache, move node to head of list
-      // and return value of key
-
-      if(curr != head) {
-        temp_node = curr->prev;
-        if (curr == tail) {
-          temp_node->next = NULL;
-          tail = temp_node;
-        } else {
-          temp_node->next = curr->next;
-          curr->next->prev = temp_node;
-        }
-
-        head->prev = curr;
-        curr->next = head;
-        curr->prev = NULL;
-        head = curr;
-      }
-      return head;
-    }
-    curr = curr->next;
-  }
-  // Key not found in cache
-  return NULL;
-}
-
-void put (char *name, char *defn) {
-  struct node *cache_entry;
-  if ((cache_entry = get(name)) == NULL) {
-    // value not in cache
-    temp_node = (struct node*) malloc (sizeof(struct node));
-    temp_node->name = strdups(name);
-    temp_node->defn = strdups(defn);
-    temp_node->next = temp_node->prev = NULL;
-    if(head == NULL) {
-      head = tail = temp_node;
-    } else {
-      head->prev = temp_node;
-      temp_node->next = head;
-      temp_node->prev = NULL;
-      head = temp_node;
-    }
-    if (global_cache_count >= CACHE_SIZE) {
-      // cache is full, evict the last node
-      // insert a new node in the list
-      tail = tail->prev;
-      tail->next = NULL;
-
-      //TODO: Free the memory as you evict nodes
-    } else {
-      // Increase the count
-      global_cache_count++;
-    }
-  } else {
-    // update cache entry
-    cache_entry->defn = strdups(defn);
-  }
 }
 
 void *io_thread_func() {
@@ -91,14 +28,16 @@ void *io_thread_func() {
   char *tmp_line_copy = NULL;
   char *line_key = NULL;
   char *line_val = NULL;
-  int found = 0;
+  int found = 0, val_size = 0;
   struct stat st;
   int fsz = 0;
   char *fbuf = NULL;
+   char *db_get_val = NULL;
   int fbuf_bytes = 0;
 
   while(1) {
     pthread_mutex_lock(&lock);
+    db_connect();
 
     if (pending_head != NULL) {
 
@@ -112,169 +51,38 @@ void *io_thread_func() {
       rewind(file);
     switch (pending_head->cont->request_type) {
       case GET:
-        tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-        while(1){
-          if(fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL){
-            line_key = strtok(tmp_line, " ");
-            if(strcmp(line_key, req_key) == 0){
-              //ke in db
-              line_val = strtok(NULL, " ");
-              // printf("119 line valL %s\n",line_val );
-              strncpy(pending_head->cont->result, line_val, strlen(line_val));
-              strncpy(pending_head->cont->result+strlen(line_val), "\0", 1); // copy null byte too
-              break;
-            }else{
-              continue;
-            }
-          }else{
-            strcpy(pending_head->cont->result, "NULL");
-            break;
-          }
-        }
-        free(tmp_line);
+        db_get(req_key, &db_get_val, &val_size);
+        strncpy(pending_head->cont->result, db_get_val, val_size + 1);
         break;
       case PUT:
         req_val = strtok(NULL, "\n");
-        found = 0;
-        tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-        tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-        stat("names.txt", &st);
-        fsz = st.st_size;
-        fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char)); // need enough buffer space for the entire file plus an additional entry assuming the key isnt in the db
-        fbuf_bytes = 0;
-        while(1){
-          if(fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL){
-            memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
-            memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
-            line_key = strtok(tmp_line, " ");
-            if(strcmp(line_key, req_key) == 0){
-              //key in db
-              found = 1;
-              continue;
-            }else{
-              //go to next line
-            memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
-            fbuf_bytes = fbuf_bytes + strlen(tmp_line_copy);
-            continue;
-            }
-          }else{
-            break;
-          }
-        }
-        if(!found){
-          strcpy(pending_head->cont->result, "NULL"); // key not found in db to do put, return NULL, dont update to file
-        }else{
-           // key found in db, add the new k/v to the end of file
-           memcpy(fbuf+fbuf_bytes, req_key, strlen(req_key));
-           memcpy(fbuf+fbuf_bytes+strlen(req_key), " ", 1);
-           memcpy(fbuf+fbuf_bytes+strlen(req_key)+1, req_val, strlen(req_val));
-           memcpy(fbuf+fbuf_bytes+strlen(req_key)+1+strlen(req_val), "\n", 1);
-
-           rewind(file);
-           fwrite(fbuf, sizeof(char), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1, file);
-           fflush(file);
-           ftruncate(fileno(file), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1);
-           strncpy(pending_head->cont->result, "0", sizeof("0"));
-        }
-        free(tmp_line_copy);
-        free(tmp_line);
-        free(fbuf);
+        db_put(req_key, req_val, &db_get_val, &val_size);
+        strncpy(pending_head->cont->result, db_get_val, val_size);
         break;
       case INSERT:
-                 req_val = strtok(NULL, "\n");
-                 found = 0;
-                 tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-                 tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-                 stat("names.txt", &st);
-                 fsz = st.st_size;
-                 fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char));
-                 fbuf_bytes = 0;
-                 while (1) {
-                   if(fgets(tmp_line, MAX_ENTRY_SIZE, file) !=  NULL) {
-                     memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
-                     memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
-                     line_key = strtok(tmp_line, " ");
-                     if (strcmp(line_key, req_key) == 0) { // found key in db; error
-                       found = 1;
-                       break;
-                     } else { // line key doesnt match search key, go to next line
-                       memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
-                       fbuf_bytes += strlen(tmp_line_copy);
-                       continue;
-                     }
-                   } else { // end of file
-                     break;
-                   }
-                 }
-                 if (found) { // duplicate key error
-                   strcpy(pending_head->cont->result, "NULL");
-                 } else {
-                   // key not found in db, add the new k/v to the end of file
-                   memcpy(fbuf+fbuf_bytes, req_key, strlen(req_key));
-                   memcpy(fbuf+fbuf_bytes+strlen(req_key), " ", 1);
-                   memcpy(fbuf+fbuf_bytes+strlen(req_key)+1, req_val, strlen(req_val));
-                   memcpy(fbuf+fbuf_bytes+strlen(req_key)+1+strlen(req_val), "\n", 1);
-
-                   rewind(file);
-                   fwrite(fbuf, sizeof(char), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1, file);
-                   fflush(file);
-                   ftruncate(fileno(file), fbuf_bytes+strlen(req_key)+1+strlen(req_val)+1);
-                   strncpy(pending_head->cont->result, "0", sizeof("0"));
-                 }
-                 free(tmp_line_copy);
-                 free(tmp_line);
-                 free(fbuf);
-                 break;
+        req_val = strtok(NULL, "\n");
+        db_insert(req_key, req_val, &db_get_val, &val_size);
+        strncpy(pending_head->cont->result, db_get_val, val_size);
+        break;
       case DELETE:
-          req_val = strtok(NULL, "\n");
-          found = 0;
-          tmp_line = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-          tmp_line_copy = (char *)calloc(MAX_ENTRY_SIZE, sizeof(char));
-          stat("names.txt", &st);
-          fsz = st.st_size;
-          fbuf = (char *)calloc(fsz+MAX_ENTRY_SIZE, sizeof(char));
-          fbuf_bytes = 0;
-          while (1) {
-            if(fgets(tmp_line, MAX_VALUE_SIZE, file) !=  NULL) {
-              memset(tmp_line_copy, 0, MAX_VALUE_SIZE);
-              memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
-              line_key = strtok(tmp_line, " ");
-              if (strcmp(line_key, req_key) == 0) { // found key in db; ignore this line for file rewrite
-                found = 1;
-                continue;
-              } else { // line key doesnt match search key, copy to buffer and go to next line
-                memcpy(fbuf+fbuf_bytes, tmp_line_copy, strlen(tmp_line_copy));
-                fbuf_bytes += strlen(tmp_line_copy);
-                continue;
-              }
-            } else { // must read to end of file
-              break;
-            }
-          }
-          if (!found) {
-            strcpy(pending_head->cont->result, "-1"); // key not found in db to do delete, return -1, dont update to file
-          } else { // key found in db, write fbuf to file without that entry
-            rewind(file);
-            fwrite(fbuf, sizeof(char), fbuf_bytes, file);
-            fflush(file);
-            ftruncate(fileno(file), fbuf_bytes);
-            strncpy(pending_head->cont->result, "0", sizeof("0"));
-          }
-          free(tmp_line_copy);
-          free(tmp_line);
-          free(fbuf);
-          break;
+        db_delete(req_key, &db_get_val, &val_size);
+        strncpy(pending_head->cont->result, db_get_val, val_size);
+        break;
     }
-    //TODO: notify main thread!
+
     //writing to pipe_fd
     int pipe_write_res;
     pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//
     if(pipe_write_res < 0){
       perror("write");
     }
-    free(pending_head);
+    node *dead_head = pending_head;
     pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
+    free(dead_head);
+    free(db_get_val);
+    free(req_str);
   }
+    db_cleanup();
     pthread_mutex_unlock(&lock);
   }
 }
@@ -313,32 +121,27 @@ void on_read_from_pip(){
     if (req_cont->request_type == GET) {
      // TODO: update time measurements
      if(strcmp(req_cont->result, "NULL") != 0) { // if result was NULL there was some kind of error
-       put(req_key, req_cont->result);
+       cache_put(req_key, req_cont->result);
      }
    } else if (req_cont->request_type == PUT) {
      // TODO: update time measurements
      if(strcmp(req_cont->result, "NULL") != 0) {
        val = strtok(NULL, " ");
-       put(req_key, val);
+       cache_put(req_key, val);
      }
 
    } else if (req_cont->request_type == INSERT) {
      // TODO: update time measurements
      if(strcmp(req_cont->result, "NULL") != 0) {
        val = strtok(NULL, " ");
-       put(req_key, val);
+       cache_put(req_key, val);
      }
    } else { // DELETE
      // TODO: update time measurements
-     if(strcmp(req_cont->result, "NULL") != 0) {
-       if ((temp_node = get(req_key)) != NULL) { // if in cache, delete it
-         curr = head;
-         head->next->prev = NULL;
-         head = head->next;
-         free(curr);
-       }
-     }
-  }
+     if (strcmp(req_cont->result, "NULL") != 0) {
+      cache_invalidate(req_key);
+          }
+        }
 
   send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
   free(req_string);
@@ -446,6 +249,7 @@ while(1){
         int new_fd = accept(initial_server_fd, (struct sockaddr_in *)&in, &sz);
         if (new_fd < 0){
           perror("Could not accept connection");
+
           continue;
         }
         //for select we need the max fd
@@ -491,6 +295,7 @@ while(1){
 
             if ((req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
               // TODO: update timings since we send directly here (and below)
+              send(temp->fd, "NULL", strlen("NULL"), 0);
               free(req_string);
               continue;
             }
@@ -510,6 +315,7 @@ while(1){
 
             //set the key
           if ((req_key = strtok(NULL, " ")) == NULL) {
+             send(temp->fd, "NULL", strlen("NULL"), 0);
              free(req_string);
              continue;
           }
@@ -529,6 +335,7 @@ while(1){
             else if (temp->request_type == PUT) {
                 if ((req_val = strtok(NULL, " ")) == NULL) {
                   printf("%s\n", "bad client request: req_val");
+                  send(temp->fd, "NULL", strlen("NULL"), 0);
                   free(req_string);
                   continue;
                 }
@@ -537,11 +344,13 @@ while(1){
             else if (temp->request_type == INSERT) {
                 if ((req_val = strtok(NULL, " ")) == NULL) {
                   printf("%s\n", "bad client request: req_val");
+                  send(temp->fd, "NULL", strlen("NULL"), 0);
                   free(req_string);
                   continue;
                 }
                 if ((temp_node = get(req_key)) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
                   printf("%s\n", "error: duplicate req_key violation");
+                  send(temp->fd, "NULL", strlen("NULL"), 0);
                   free(req_string);
                   continue;
                 }
@@ -550,6 +359,7 @@ while(1){
                 else if (temp->request_type == DELETE) {
                 issue_io_req(); // issue io request to find out if req_key is in db to delete
               } else {
+                send(temp->fd, "NULL", strlen("NULL"), 0);
                 free(req_string);
                 continue;
                 }
@@ -569,14 +379,14 @@ while(1){
 
 }
 
-int main (void)
+int run_server_3 (void)
 {
   my_pid = getpid();
 
   pending_head = pending_tail = NULL;
   head = tail = curr = temp_node = NULL;
 
-  file = fopen("names.txt", "r+");
+  // file = fopen("names.txt", "r+");
 
   //initilize socket fds for client connections:
   for(int i=0; i< 5000; i++) sockfds[i] = -1;

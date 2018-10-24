@@ -14,7 +14,8 @@
 #include <sys/stat.h>
 #include <sys/select.h>
 #include <sys/time.h>
-
+#include "cache.h"
+#include "db.h"
 #define SIGUNUSED   31
 
 #define _NSIG       65  /* Biggest signal number + 1
@@ -90,5 +91,5 @@ static void outgoing_data_handler(int sig, siginfo_t *si, void *data); // To be 
 static int make_socket_non_blocking (int sfd);
 
 int server_func();
-
+int run_server_3(void);
 void event_loop_scheduler();
