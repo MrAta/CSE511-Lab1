@@ -61,16 +61,24 @@ int server_1_delete_request(char *key, char **ret_buffer, int *ret_size) {
 }
 
 void *server_handler(void *arg) {
+  printf("Starting handler\n");
   db_connect();
   int sockfd = *(int *) arg;
   char *input_line = (char *) calloc(1024, sizeof(char *));
   char *tokens, *response = NULL, *key, *value, *save_ptr;
   int response_size;
   read(sockfd, input_line, 1024);
+  printf("Read data: %s\n", input_line);
 
   tokens = strtok_r(input_line, " ", &save_ptr);
   key = strtok_r(NULL, " ", &save_ptr);
   value = strtok_r(NULL, " ", &save_ptr);
+  if(tokens == NULL || key == NULL) {
+    db_cleanup();
+    free(input_line);
+    free(arg);
+    return NULL;
+  }
   if (strncmp(tokens, "GET", 3) == 0) {
     server_1_get_request(key, &response, &response_size);
     write(sockfd, response, (size_t) response_size);
@@ -90,6 +98,9 @@ void *server_handler(void *arg) {
   if (response != NULL) {
     free(response);
   }
+  free(input_line);
+  free(arg);
+  printf("Done handling request\n");
   return NULL;
 }
 
@@ -123,7 +134,7 @@ int create_server_1() {
 }
 
 int loop_and_listen_1() {
-  int sock_fd = create_server_1();
+  int sock_fd = create_server_1(), *new_sock;
   if (listen(sock_fd, QUEUED_CONNECTIONS) != 0) {
     perror("listen failed");
     return EXIT_FAILURE;
@@ -131,17 +142,21 @@ int loop_and_listen_1() {
 
   while (1) {
     socklen_t cli_addr_size = sizeof(address);
+    printf("Accepting new connections\n");
     int newsockfd = accept(sock_fd, (struct sockaddr *) &address, &cli_addr_size);
+    printf("Got new connection\n");
     if (newsockfd < 0) {
       perror("Could not accept connection");
       continue;
     }
+    new_sock = malloc(1);
+    *new_sock = newsockfd;
     pthread_t *handler_thread = (pthread_t *) malloc(sizeof(pthread_t));
-    if (pthread_create(handler_thread, NULL, server_handler, (void *) &newsockfd) != 0) {
+    if (pthread_create(handler_thread, NULL, server_handler, (void *) new_sock) != 0) {
       perror("Could not start handler");
       continue;
     }
-    pthread_detach(*handler_thread);
+//    pthread_detach(*handler_thread);
   }
 }
 

@@ -288,7 +288,7 @@ void event_loop_scheduler_2() {
           free(req_string);
           continue;
         }
-
+        if(req_type == NULL) continue;
         //checking reques type
         if (strcmp(req_type, "GET") == 0) {
           temp->request_type = GET;
