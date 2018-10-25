@@ -34,18 +34,6 @@ void *client_func() {
   printf("REQUEST SENT: %s\n", hello[0]);
   valread = read( sock , buffer, 1024);
   printf("RESPONSE: %s\n",buffer );
-
-    send(sock , mello[0] , strlen(mello[0]) , 0 );
-    printf("REQUEST SENT: %s\n", mello[0]);
-    valread = read( sock , buffer, 1024);
-    printf("RESPONSE: %s\n",buffer );
-
-
-        send(sock , mello[0] , strlen(cello[0]) , 0 );
-        printf("REQUEST SENT: %s\n", cello[0]);
-        valread = read( sock , buffer, 1024);
-        printf("RESPONSE: %s\n",buffer );
-
 }
 
 int main(int argc, char const *argv[])
