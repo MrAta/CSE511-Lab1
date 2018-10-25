@@ -19,6 +19,7 @@ void *io_thread_func_2() {
   char *tmp_line_copy = NULL;
   char *line_key = NULL;
   char *line_val = NULL;
+  char *save_ptr;
   int found = 0, val_size = 0;
   struct stat st;
   int fsz = 0;
@@ -37,8 +38,8 @@ void *io_thread_func_2() {
       strcpy (req_str, pending_head->cont->buffer);
 
       // at this point request in buffer is valid string
-      req_type = strtok_r(req_str, " ");
-      req_key = strtok_r(NULL, " ");
+      req_type = strtok_r(req_str, " ", &save_ptr);
+      req_key = strtok_r(NULL, " ", &save_ptr);
       rewind(file);
       switch (pending_head->cont->request_type) {
         case GET:
@@ -46,12 +47,12 @@ void *io_thread_func_2() {
           strncpy(pending_head->cont->result, db_get_val, val_size + 1);
           break;
         case PUT:
-          req_val = strtok_r(NULL, "\n");
+          req_val = strtok_r(NULL, "\n", &save_ptr);
           db_put(req_key, req_val, &db_get_val, &val_size);
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
         case INSERT:
-          req_val = strtok_r(NULL, "\n");
+          req_val = strtok_r(NULL, "\n", &save_ptr);
           db_insert(req_key, req_val, &db_get_val, &val_size);
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
@@ -97,6 +98,7 @@ void issue_io_req_2() {
 }
 
 void on_read_from_pipe_2() {
+  char *save_ptr;
   struct continuation *req_cont = (struct continuation *) malloc(sizeof(struct continuation));//TODO
   int read_pipe_res;
   read_pipe_res = read(pipe_fd[0], req_cont, sizeof(struct continuation));
@@ -108,8 +110,8 @@ void on_read_from_pipe_2() {
   char *req_key = NULL;
   char *val = NULL;
   strcpy(req_string, req_cont->buffer); // buffer includes null byte
-  req_type = strtok_r(req_string, " ");
-  req_key = strtok_r(NULL, " ");
+  req_type = strtok_r(req_string, " ", &save_ptr);
+  req_key = strtok_r(NULL, " ", &save_ptr);
   if (req_cont->request_type == GET) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "NOTFOUND") != 0) { // if result was NULL there was some kind of error
@@ -118,14 +120,14 @@ void on_read_from_pipe_2() {
   } else if (req_cont->request_type == PUT) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "NOTFOUND") != 0) {
-      val = strtok_r(NULL, " ");
+      val = strtok_r(NULL, " ", &save_ptr);
       cache_put(req_key, val);
     }
 
   } else if (req_cont->request_type == INSERT) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "DUPLICATE") != 0) {
-      val = strtok_r(NULL, " ");
+      val = strtok_r(NULL, " ", &save_ptr);
       cache_put(req_key, val);
     }
   } else { // DELETE
@@ -265,6 +267,7 @@ void event_loop_scheduler_2() {
         //read from it!
         int valread;
         char *req_string;
+        char *save_ptr;
         char *req_type = NULL;
         char *req_key = NULL;
         char *req_val = NULL;
@@ -280,7 +283,7 @@ void event_loop_scheduler_2() {
         memset(temp->result, 0, MAX_ENTRY_SIZE);
         temp->fd = events[i].data.fd;
 
-        if (( req_type = strtok_r(req_string, " ")) == NULL) { // will ensure strlen>0
+        if (( req_type = strtok_r(req_string, " ", &save_ptr)) == NULL) { // will ensure strlen>0
           // TODO: update timings since we send directly here (and below)
           free(req_string);
           continue;
@@ -300,7 +303,7 @@ void event_loop_scheduler_2() {
         }
 
         //set the key
-        if (( req_key = strtok_r(NULL, " ")) == NULL) {
+        if (( req_key = strtok_r(NULL, " ", &save_ptr)) == NULL) {
           free(req_string);
           continue;
         }
@@ -318,14 +321,14 @@ void event_loop_scheduler_2() {
             issue_io_req_2();
           }
         } else if (temp->request_type == PUT) {
-          if (( req_val = strtok_r(NULL, " ")) == NULL) {
+          if (( req_val = strtok_r(NULL, " ", &save_ptr)) == NULL) {
             printf("%s\n", "bad client request: req_val");
             free(req_string);
             continue;
           }
           issue_io_req_2();
         } else if (temp->request_type == INSERT) {
-          if (( req_val = strtok_r(NULL, " ")) == NULL) {
+          if (( req_val = strtok_r(NULL, " ", &save_ptr)) == NULL) {
             printf("%s\n", "bad client request: req_val");
             free(req_string);
             continue;

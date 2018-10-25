@@ -64,13 +64,13 @@ void *server_handler(void *arg) {
   db_connect();
   int sockfd = *(int *) arg;
   char *input_line = (char *) calloc(1024, sizeof(char *));
-  char *tokens, *response = NULL, *key, *value;
+  char *tokens, *response = NULL, *key, *value, *save_ptr;
   int response_size;
   read(sockfd, input_line, 1024);
 
-  tokens = strtok_r(input_line, " ");
-  key = strtok_r(NULL, " ");
-  value = strtok_r(NULL, " ");
+  tokens = strtok_r(input_line, " ", &save_ptr);
+  key = strtok_r(NULL, " ", &save_ptr);
+  value = strtok_r(NULL, " ", &save_ptr);
   if (strncmp(tokens, "GET", 3) == 0) {
     server_1_get_request(key, &response, &response_size);
     write(sockfd, response, (size_t) response_size);

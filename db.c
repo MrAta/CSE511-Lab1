@@ -19,14 +19,14 @@ void db_cleanup() {
 
 
 int db_get(char *key, char **ret_buf, int *ret_len) {
-  char *tmp_line = NULL, *line_key = NULL, *line_val = NULL;
+  char *tmp_line = NULL, *line_key = NULL, *line_val = NULL, *save_ptr;
   tmp_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   while (1) {
     if (fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL) {
-      line_key = strtok_r(tmp_line, " ");
+      line_key = strtok_r(tmp_line, " ", &save_ptr);
       if (strcmp(line_key, key) == 0) { // found key in db
-        line_val = strtok_r(NULL, " ");
+        line_val = strtok_r(NULL, " ", &save_ptr);
         strncpy(*ret_buf, line_val, strlen(line_val));
         strncpy(*ret_buf + strlen(line_val), "\0", 1);
         *ret_len = (int) strlen(line_val);
@@ -136,6 +136,7 @@ int db_delete(char *key, char **ret_buf, int *ret_len) {
 int db_search(const char *key, char **fbuf, int *fbuf_bytes) {
   char *tmp_line = NULL;
   char *tmp_line_copy = NULL;
+  char *save_ptr;
   (*fbuf) = NULL;
   int fsz, found = 0;
   char *line_key = NULL;
@@ -152,7 +153,7 @@ int db_search(const char *key, char **fbuf, int *fbuf_bytes) {
     if (fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL) {
       memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
       memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
-      line_key = strtok_r(tmp_line, " ");
+      line_key = strtok_r(tmp_line, " ", &save_ptr);
       if (strcmp(line_key, key) == 0) { // found key in db; error
         found = 1;
         continue;
