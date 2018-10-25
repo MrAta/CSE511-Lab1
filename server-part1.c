@@ -74,6 +74,7 @@ void *server_handler(void *arg) {
   key = strtok_r(NULL, " ", &save_ptr);
   value = strtok_r(NULL, " ", &save_ptr);
   if(tokens == NULL || key == NULL) {
+    db_cleanup();
     free(input_line);
     free(arg);
     return NULL;
