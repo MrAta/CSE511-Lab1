@@ -43,6 +43,7 @@ struct sockaddr_in address;
 pthread_t io_thread[THREAD_POOL_SIZE];
 int initial_server_fd;
 pid_t my_pid;
+pthread_t main_tid;
 union sigval *v;
 
 #endif //P1_CSRF_SERVER_NONBLOCK_H

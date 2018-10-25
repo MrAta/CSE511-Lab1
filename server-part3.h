@@ -16,7 +16,9 @@
 
 /*function list*/
 
-void *io_thread_func_3(); // To be completed
+void io_thread_func_3(); // To be completed
+
+void *setup_sigs_and_exec_thread();
 
 static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data); // To be completed
 
