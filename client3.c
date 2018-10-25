@@ -13,7 +13,7 @@ struct sockaddr_in *serv_addr;
 
 void *client_func() {
   int sock = 0, valread;
-
+  struct timespec start_time, end_time;
   char buffer[1024] = {0};
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -27,12 +27,14 @@ void *client_func() {
       printf("\nConnection Failed \n");
       exit(0);
   }
-
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
   send(sock , hello[0] , strlen(hello[0]) , 0 );
   printf("REQUEST SENT: %s\n", hello[0]);
   valread = read( sock , buffer, 1024);
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
   printf("RESPONSE: %s\n",buffer );
-
+  printf("Request took %lu time\n", end_time.tv_sec - start_time.tv_nsec);
+  return NULL;
 }
 
 int main(int argc, char const *argv[])
