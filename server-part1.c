@@ -68,9 +68,9 @@ void *server_handler(void *arg) {
   int response_size;
   read(sockfd, input_line, 1024);
 
-  tokens = strtok(input_line, " ");
-  key = strtok(NULL, " ");
-  value = strtok(NULL, " ");
+  tokens = strtok_r(input_line, " ");
+  key = strtok_r(NULL, " ");
+  value = strtok_r(NULL, " ");
   if (strncmp(tokens, "GET", 3) == 0) {
     server_1_get_request(key, &response, &response_size);
     write(sockfd, response, (size_t) response_size);
