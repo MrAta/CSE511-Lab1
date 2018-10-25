@@ -72,8 +72,8 @@ void calc_cdf(){
       cdf[i] = cdf[i-1] + popularities[i];
   }
 }
-char *hello[] = {"GET Atajoon"};
-char *mello[] = {"GET Atajoon"};
+char *hello[] = {"GET Tammy"};//{"GET Atajoon", "GET Clifton", "GET Tammy", "INSERT Sami Pali", "DELETE Tammy", "GET Tammy"};
+
 
 struct sockaddr_in *serv_addr;
 
@@ -93,16 +93,12 @@ void *client_func() {
       printf("\nConnection Failed \n");
       exit(0);
   }
-
+// for(int i=0; i < 6; i++){
   send(sock , hello[0] , strlen(hello[0]) , 0 );
   printf("REQUEST SENT: %s\n", hello[0]);
   valread = read( sock , buffer, 1024);
   printf("RESPONSE: %s\n",buffer );
-
-  send(sock , mello[0] , strlen(mello[0]) , 0 );
-  printf("REQUEST SENT: %s\n", mello[0]);
-  valread = read( sock , buffer, 1024);
-  printf("RESPONSE: %s\n",buffer );
+// }
 
 }
 
@@ -112,7 +108,7 @@ int main(int argc, char const *argv[])
     generate_popularities();
     calc_cdf();
 
-    pthread_t client_thread;
+    pthread_t client_thread[10];
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
 
@@ -127,10 +123,10 @@ int main(int argc, char const *argv[])
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
-
-    pthread_create(&client_thread, NULL, client_func, NULL);
-
-    pthread_join(client_thread, NULL);
+    for(int i=0; i<10; i++)
+    pthread_create(&client_thread[i], NULL, client_func, NULL);
+for(int i=0; i<10; i++)
+    pthread_join(client_thread[i], NULL);
 
     return 0;
 }
