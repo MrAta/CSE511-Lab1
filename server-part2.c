@@ -37,8 +37,8 @@ void *io_thread_func_2() {
       strcpy (req_str, pending_head->cont->buffer);
 
       // at this point request in buffer is valid string
-      req_type = strtok(req_str, " ");
-      req_key = strtok(NULL, " ");
+      req_type = strsep(&req_str, " ");
+      req_key = strsep(&req_str, " ");
       rewind(file);
       switch (pending_head->cont->request_type) {
         case GET:
@@ -46,12 +46,12 @@ void *io_thread_func_2() {
           strncpy(pending_head->cont->result, db_get_val, val_size + 1);
           break;
         case PUT:
-          req_val = strtok(NULL, "\n");
+          req_val = strsep(&req_str, " ");
           db_put(req_key, req_val, &db_get_val, &val_size);
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
         case INSERT:
-          req_val = strtok(NULL, "\n");
+          req_val = strsep(&req_str, " ");
           db_insert(req_key, req_val, &db_get_val, &val_size);
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
@@ -108,8 +108,8 @@ void on_read_from_pipe_2() {
   char *req_key = NULL;
   char *val = NULL;
   strcpy(req_string, req_cont->buffer); // buffer includes null byte
-  req_type = strtok(req_string, " ");
-  req_key = strtok(NULL, " ");
+  req_type = strsep(&req_string, " ");
+  req_key = strsep(&req_string, " ");
   if (req_cont->request_type == GET) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "NOTFOUND") != 0) { // if result was NULL there was some kind of error
@@ -118,14 +118,14 @@ void on_read_from_pipe_2() {
   } else if (req_cont->request_type == PUT) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "NOTFOUND") != 0) {
-      val = strtok(NULL, " ");
+      val = strsep(&req_string, " ");
       cache_put(req_key, val);
     }
 
   } else if (req_cont->request_type == INSERT) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "DUPLICATE") != 0) {
-      val = strtok(NULL, " ");
+      val = strsep(&req_string, " ");
       cache_put(req_key, val);
     }
   } else { // DELETE
@@ -250,7 +250,7 @@ void event_loop_scheduler_2() {
           continue;
         }
         //setnonblocking(new_fd);
-        make_socket_non_blocking_2(new_fd);
+        // make_socket_non_blocking_2(new_fd);
         ev.events = EPOLLIN | EPOLLET;
         ev.data.fd = new_fd;
         if (epoll_ctl(epollfd, EPOLL_CTL_ADD, new_fd,
@@ -262,6 +262,7 @@ void event_loop_scheduler_2() {
       } else if (events[i].data.fd == pipe_fd[0]) {
         on_read_from_pipe_2();
       } else {
+
         //read from it!
         int valread;
         char *req_string;
@@ -274,15 +275,17 @@ void event_loop_scheduler_2() {
         memset(temp->buffer, 0, MAX_ENTRY_SIZE);
 
         valread = read(events[i].data.fd, temp->buffer, MAX_ENTRY_SIZE);
+        printf("CMD: %s\n", temp->buffer);
         req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
         strcpy (req_string, temp->buffer);
 
         memset(temp->result, 0, MAX_ENTRY_SIZE);
         temp->fd = events[i].data.fd;
 
-        if (( req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
+        if (( req_type = strsep(&req_string, " ")) == NULL) { // will ensure strlen>0
           // TODO: update timings since we send directly here (and below)
           free(req_string);
+          // free()
           continue;
         }
 
@@ -300,7 +303,7 @@ void event_loop_scheduler_2() {
         }
 
         //set the key
-        if (( req_key = strtok(NULL, " ")) == NULL) {
+        if (( req_key = strsep(&req_string, " ")) == NULL) {
           free(req_string);
           continue;
         }
@@ -312,20 +315,22 @@ void event_loop_scheduler_2() {
             printf("\nGET result found in cache\n\n");
             strcpy(temp->result, temp_node->defn);
             send(temp->fd, temp->result, strlen(temp->result), 0);
-
+            free(req_string);
           } else { // not in cache, check db
-            printf("\nnot in in cache\n\n");
             issue_io_req_2();
+            free(req_string);
+            // free(temp);
           }
         } else if (temp->request_type == PUT) {
-          if (( req_val = strtok(NULL, " ")) == NULL) {
+          if (( req_val = strsep(&req_string, " ")) == NULL) {
             printf("%s\n", "bad client request: req_val");
             free(req_string);
             continue;
           }
           issue_io_req_2();
+          free(req_string);
         } else if (temp->request_type == INSERT) {
-          if (( req_val = strtok(NULL, " ")) == NULL) {
+          if (( req_val = strsep(&req_string, " ")) == NULL) {
             printf("%s\n", "bad client request: req_val");
             free(req_string);
             continue;
@@ -337,12 +342,16 @@ void event_loop_scheduler_2() {
             continue;
           }
           issue_io_req_2(); // if not in cache, still might be in db
+          free(req_string);
         } else if (temp->request_type == DELETE) {
           issue_io_req_2(); // issue io request to find out if req_key is in db to delete
+          free(req_string);
+          // free(temp);
         } else {
           free(req_string);
           continue;
         }
+        // free(req_string);
       }
 
     }

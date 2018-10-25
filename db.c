@@ -24,9 +24,9 @@ int db_get(char *key, char **ret_buf, int *ret_len) {
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   while (1) {
     if (fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL) {
-      line_key = strtok(tmp_line, " ");
+      line_key = strsep(&tmp_line, " ");
       if (strcmp(line_key, key) == 0) { // found key in db
-        line_val = strtok(NULL, " ");
+        line_val = strsep(&tmp_line, " ");
         strncpy(*ret_buf, line_val, strlen(line_val));
         strncpy(*ret_buf + strlen(line_val), "\0", 1);
         *ret_len = (int) strlen(line_val);
@@ -152,7 +152,7 @@ int db_search(const char *key, char **fbuf, int *fbuf_bytes) {
     if (fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL) {
       memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
       memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
-      line_key = strtok(tmp_line, " ");
+      line_key = strsep(&tmp_line, " ");
       if (strcmp(line_key, key) == 0) { // found key in db; error
         found = 1;
         continue;

@@ -119,6 +119,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
   temp->start_time = time(0);
   memset(temp->buffer, 0, MAX_ENTRY_SIZE);
   valread = read(incoming, temp->buffer, MAX_ENTRY_SIZE);
+  printf("CMD3: %s\n", temp->buffer);
 
   req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
   strcpy(req_string, temp->buffer);
