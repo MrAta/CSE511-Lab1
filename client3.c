@@ -33,7 +33,7 @@ void *client_func() {
   valread = read( sock , buffer, 1024);
   clock_gettime(CLOCK_MONOTONIC, &end_time);
   printf("RESPONSE: %s\n",buffer );
-  printf("Request took %lu time\n", end_time.tv_nsec - start_time.tv_nsec);
+  printf("Request took %lu ns\n", end_time.tv_nsec - start_time.tv_nsec);
   return NULL;
 }
 
