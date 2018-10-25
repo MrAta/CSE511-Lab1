@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
+#include <time.h>
 #define PORT 8080
 #define N_KEY 1000 //number of unique keys
 #define a 1.25 //parameter for zipf distribution
@@ -15,9 +16,10 @@
 long int zeta; //zeta fixed for zipf
 char * keys[N_KEY] = {NULL};
 char * values[N_KEY] = {NULL};
-float popularities[N_KEY];
-float cdf[N_KEY];
-
+double popularities[N_KEY];
+double cdf[N_KEY];
+int arr_rate = 100;
+int arr_type = 1;
 
 static char *rand_string(char *str, size_t size)
 {
@@ -42,7 +44,7 @@ char* rand_string_alloc(size_t size)
 }
 
 long int calc_zeta(){
-   float sum = 0.0;
+   double sum = 0.0;
   for(int i=1; i < N_KEY+1; i++)
     sum += 1/(pow(i,a));
 
@@ -58,7 +60,7 @@ void generate_key_values(){
     //TODO: do we need to write them in a file?
   }
 }
-float zipf(int x){
+double zipf(int x){
   return (1/(pow(x,a)))/zeta;
 }
 void generate_popularities(){
@@ -72,6 +74,27 @@ void calc_cdf(){
       cdf[i] = cdf[i-1] + popularities[i];
   }
 }
+
+char * next_key(){
+  double p = (rand() / (RAND_MAX+1.0));
+  //TODO: optimize it with binary search
+  for(int i=0; i< N_KEY; i++)
+    if(p < cdf[i]){
+      return keys[i];
+    }
+    return NULL;
+}
+
+double nextArrival(){
+    if (arr_type == 1){//unifrom
+      return 1/arr_rate;
+    }
+    else{//exponential
+      return (-1 * log(1 - (rand()/(RAND_MAX+1.0)))/(arr_rate));
+    }
+    return 1/arr_rate; //default: unifrom :D
+}
+
 char *hello[] = {"GET Tammy"};//{"GET Atajoon", "GET Clifton", "GET Tammy", "INSERT Sami Pali", "DELETE Tammy", "GET Tammy"};
 
 
@@ -94,10 +117,14 @@ void *client_func() {
       exit(0);
   }
 // for(int i=0; i < 6; i++){
+  clock_t t;
+  t = clock();
   send(sock , hello[0] , strlen(hello[0]) , 0 );
   printf("REQUEST SENT: %s\n", hello[0]);
   valread = read( sock , buffer, 1024);
-  printf("RESPONSE: %s\n",buffer );
+  t = clock() - t;
+  double time_taken = ((double)t)/CLOCKS_PER_SEC;
+  printf("RESPONSE: %s took %f\n",buffer,  time_taken);
 // }
 
 }
@@ -123,10 +150,12 @@ int main(int argc, char const *argv[])
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
+
     for(int i=0; i<10; i++)
-    pthread_create(&client_thread[i], NULL, client_func, NULL);
-for(int i=0; i<10; i++)
-    pthread_join(client_thread[i], NULL);
+    client_func();
+    // pthread_create(&client_thread[i], NULL, client_func, NULL);
+// for(int i=0; i<10; i++)
+    // pthread_join(client_thread[i], NULL);
 
     return 0;
 }
