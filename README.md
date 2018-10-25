@@ -29,9 +29,17 @@ To clean:
 $ make clean
 ```
 To run the server:
-
+Type 1 (Blocking socket): 
 ```bash
-$ ./server
+$ ./server 1
+```
+Type 2 (Non-Blocking socket using epoll):
+```bash
+$ ./server 2
+```
+Type 3 (Non-Blocking with UNIX signals):
+```bash
+$ ./server 3
 ```
 
 To run the clients:
@@ -42,3 +50,4 @@ $ ./client2
 $ ./client3
 $ ./client4
 ```
+The binary `client` contains the code necessary to run the big experiment. 
