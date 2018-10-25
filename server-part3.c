@@ -28,8 +28,8 @@ void *io_thread_func_3() {
       strcpy(req_str, pending_head->cont->buffer);
 
       // at this point request in buffer is valid string
-      strtok(req_str, " ");
-      req_key = strtok(NULL, " ");
+      strsep(&req_str, " ");
+      req_key = strsep(&req_str, " ");
 
       switch (pending_head->cont->request_type) {
         case GET:
@@ -37,12 +37,12 @@ void *io_thread_func_3() {
           strncpy(pending_head->cont->result, db_get_val, val_size + 1);
           break;
         case PUT:
-          req_val = strtok(NULL, "\n");
+          req_val = strsep(&req_str, "\n");
           db_put(req_key, req_val, &db_get_val, &val_size);
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
         case INSERT:
-          req_val = strtok(NULL, "\n");
+          req_val = strsep(&req_str, "\n");
           db_insert(req_key, req_val, &db_get_val, &val_size);
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
@@ -127,7 +127,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
   memset(temp->result, 0, MAX_ENTRY_SIZE);
   temp->fd = incoming;
 
-  if (( req_type = strtok(req_string, " ")) == NULL) { // will ensure strlen>0
+  if (( req_type = strsep(&req_string, " ")) == NULL) { // will ensure strlen>0
     printf("%s\n", "bad client request: req_type");
     // TODO: update timings since we send directly here (and below)
     send(temp->fd, "NULL", strlen("NULL"), 0);
@@ -138,7 +138,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
 
   setup_request_type(req_type, &tmp_err_code);
 
-  if (( req_key = strtok(NULL, " ")) == NULL) {
+  if (( req_key = strsep(&req_string, " ")) == NULL) {
     printf("%s\n", "bad client request: req_key");
     // TODO: update timings
     send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
@@ -157,7 +157,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
       issue_io_req_3();
     }
   } else if (temp->request_type == PUT) {
-    if (( req_val = strtok(NULL, " ")) == NULL) {
+    if (( req_val = strsep(&req_string, " ")) == NULL) {
       printf("%s\n", "bad client request: req_val");
       // TODO: update timings
       send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
@@ -167,7 +167,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     }
     issue_io_req_3();
   } else if (temp->request_type == INSERT) {
-    if (( req_val = strtok(NULL, " ")) == NULL) {
+    if (( req_val = strsep(&req_string, " ")) == NULL) {
       printf("%s\n", "bad client request: req_val");
       // TODO: update timings
       send(temp->fd, tmp_err_code, strlen(tmp_err_code), 0);
@@ -204,14 +204,14 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   // update time measurements and cache in this func
 
   struct continuation *req_cont = (struct continuation *) si->si_value.sival_ptr;
-  char *req_string = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
+  char *req_str = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
   char *req_type = NULL;
   char *req_key = NULL;
   char *val = NULL;
 
-  strcpy(req_string, req_cont->buffer); // buffer includes null byte
-  req_type = strtok(req_string, " ");
-  req_key = strtok(NULL, " ");
+  strcpy(req_str, req_cont->buffer); // buffer includes null byte
+  req_type = strsep(&req_str, " ");
+  req_key = strsep(&req_str, " ");
 
   if (req_cont->request_type == GET) {
     // TODO: update time measurements
@@ -221,14 +221,14 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   } else if (req_cont->request_type == PUT) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "NOTFOUND") != 0) {
-      val = strtok(NULL, " ");
+      val = strsep(&req_str, " ");
       cache_put(req_key, val);
     }
 
   } else if (req_cont->request_type == INSERT) {
     // TODO: update time measurements
     if (strcmp(req_cont->result, "DUPLICATE") != 0) {
-      val = strtok(NULL, " ");
+      val = strsep(&req_str, " ");
       cache_put(req_key, val);
     }
   } else { // DELETE
@@ -239,7 +239,7 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   }
 
   send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
-  free(req_string);
+  free(req_str);
   free(req_cont); // frees the cont that was just executed
 }
 
