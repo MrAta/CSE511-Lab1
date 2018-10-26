@@ -107,7 +107,7 @@ void issue_io_req_3(struct continuation *tmp) {
 
 static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
   
-  pthread_mutex_unlock(&lock);
+  //pthread_mutex_unlock(&lock);
   
   int valread, incoming;
   char *req_string;
@@ -208,7 +208,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
   // free("BAD_REQ");
   free(req_string);
 
-  pthread_mutex_unlock(&lock);
+  //pthread_mutex_unlock(&lock);
 }
 
 static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
@@ -222,7 +222,7 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   char *save_ptr;
   char *val = NULL;
 
-  pthread_mutex_lock(&lock);
+  //pthread_mutex_lock(&lock);
   
   strcpy(req_string, req_cont->buffer); // buffer includes null byte
   req_type = strtok_r(req_string, " ", &save_ptr);
@@ -258,7 +258,7 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   free(req_string);
   free(req_cont); // frees the cont that was just executed
 
-  pthread_mutex_unlock(&lock);
+  //pthread_mutex_unlock(&lock);
 }
 
 static int make_socket_non_blocking_3(int sfd) {

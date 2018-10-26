@@ -101,7 +101,7 @@ char *hello[] = {"INSERT Aman J", "DELETE Aman", "PUT Aman Jain", "DELETE Leslie
 
 struct sockaddr_in *serv_addr;
 
-void client_func() {
+void client_func(int i) {
   int sock = 0, valread;
 
   char buffer[1024] = {0};
@@ -122,11 +122,11 @@ void client_func() {
   clock_t t;
   t = clock();
   send(sock , hello[r] , strlen(hello[r]) , 0 );
-  printf("REQUEST SENT: %s\n", hello[r]);
+  printf("%d. REQUEST SENT: %s\n", i, hello[r]);
   valread = read( sock , buffer, 1024);
   t = clock() - t;
   double time_taken = ((double)t)/CLOCKS_PER_SEC;
-  printf("RESPONSE: %s took %f\n",buffer,  time_taken);
+  printf("%d. RESPONSE: %s took %f\n",i, buffer,  time_taken);
 // }
 
 }
@@ -153,8 +153,8 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    for(int i=0; i<25; i++) {
-	client_func();
+    for(int i=0; i<250; i++) {
+	client_func(i);
     }
     // pthread_create(&client_thread[i], NULL, client_func, NULL);
 // for(int i=0; i<10; i++)
