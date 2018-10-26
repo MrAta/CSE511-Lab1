@@ -1,4 +1,4 @@
-all: server client client2 client3 client4 client5
+all: server client client2 client3 client4 client5 client6
 
 server: server-part3 server-part2 server-part1 deps
 	gcc -g -c -std=gnu99 server-main.c -o server-main.o -pthread
@@ -33,5 +33,8 @@ client4: client4.c
 client5: client5.c
 	gcc -g -std=gnu99 client5.c -o client5 -pthread
 
+client6: client6.c
+	gcc -g -std=gnu99 client6.c -o client6 -pthread
+
 clean:
-	rm server client client2 client3 client4 client5 *.o
+	rm server client client2 client3 client4 client5 client6 *.o

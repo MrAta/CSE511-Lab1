@@ -61,38 +61,37 @@ int server_1_delete_request(char *key, char **ret_buffer, int *ret_size) {
 }
 
 void *server_handler(void *arg) {
-  printf("Starting handler\n");
   db_connect();
   int sockfd = *(int *) arg;
-  char *input_line = (char *) calloc(1024, sizeof(char *));
+  char *input_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char *));
   char *tokens, *response = NULL, *key, *value, *save_ptr;
   int response_size;
-  read(sockfd, input_line, 1024);
-  printf("Read data: %s\n", input_line);
+  while (read(sockfd, input_line, MAX_ENTRY_SIZE)) {
 
-  tokens = strtok_r(input_line, " ", &save_ptr);
-  key = strtok_r(NULL, " ", &save_ptr);
-  value = strtok_r(NULL, " ", &save_ptr);
-  if(tokens == NULL || key == NULL) {
-    db_cleanup();
-    free(input_line);
-    free(arg);
-    return NULL;
-  }
-  if (strncmp(tokens, "GET", 3) == 0) {
-    server_1_get_request(key, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else if (strncmp(tokens, "PUT", 3) == 0) {
-    server_1_put_request(key, value, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else if (strncmp(tokens, "INSERT", 6) == 0) {
-    server_1_insert_request(key, value, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else if (strncmp(tokens, "DELETE", 6) == 0) {
-    server_1_delete_request(key, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else {
-    write(sockfd, "ERROR", 6);
+    tokens = strtok_r(input_line, " ", &save_ptr);
+    key = strtok_r(NULL, " ", &save_ptr);
+    value = strtok_r(NULL, " ", &save_ptr);
+    if (tokens == NULL || key == NULL) {
+      db_cleanup();
+      free(input_line);
+      free(arg);
+      return NULL;
+    }
+    if (strncmp(tokens, "GET", 3) == 0) {
+      server_1_get_request(key, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else if (strncmp(tokens, "PUT", 3) == 0) {
+      server_1_put_request(key, value, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else if (strncmp(tokens, "INSERT", 6) == 0) {
+      server_1_insert_request(key, value, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else if (strncmp(tokens, "DELETE", 6) == 0) {
+      server_1_delete_request(key, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else {
+      write(sockfd, "ERROR", 6);
+    }
   }
   db_cleanup();
   if (response != NULL) {
@@ -100,7 +99,7 @@ void *server_handler(void *arg) {
   }
   free(input_line);
   free(arg);
-  printf("Done handling request\n");
+  close(sockfd);
   return NULL;
 }
 
@@ -142,7 +141,6 @@ int loop_and_listen_1() {
 
   while (1) {
     socklen_t cli_addr_size = sizeof(address);
-    printf("Accepting new connections\n");
     int newsockfd = accept(sock_fd, (struct sockaddr *) &address, &cli_addr_size);
     printf("Got new connection\n");
     if (newsockfd < 0) {
@@ -156,7 +154,6 @@ int loop_and_listen_1() {
       perror("Could not start handler");
       continue;
     }
-//    pthread_detach(*handler_thread);
   }
 }
 
