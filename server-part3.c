@@ -475,7 +475,7 @@ int run_server_3(void) {
   main_tid = pthread_self();
 
   pending_head = pending_tail = NULL;
-  head = tail = curr = temp_node = NULL;
+  head = tail = temp_node = NULL;
 
   // Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
