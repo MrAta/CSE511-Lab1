@@ -23,57 +23,45 @@ void io_thread_func_3() {
     pthread_mutex_lock(&lock);
     db_connect();
 
-    // if (pending_head != NULL) {
-      struct continuation *req_cont = (struct continuation *) malloc(sizeof(struct continuation));
+    if (pending_head != NULL) {
+
       req_str = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
-      // strcpy(req_str, pending_head->cont->buffer);
-      int read_pipe_res;
-      read_pipe_res = read(pipe_fd[0], req_cont, sizeof(struct continuation));
-      if (read_pipe_res < 0) {
-        perror("read");
-      }
+      strcpy(req_str, pending_head->cont->buffer);
 
       // at this point request in buffer is valid string
       strtok_r(req_str, " ", &save_ptr);
       req_key = strtok_r(NULL, " ", &save_ptr);
 
-      switch (req_cont->request_type) {
+      switch (pending_head->cont->request_type) {
         case GET:
           db_get(req_key, &db_get_val, &val_size);
-          strncpy(req_cont->result, db_get_val, val_size + 1);
+          strncpy(pending_head->cont->result, db_get_val, val_size + 1);
           break;
         case PUT:
           req_val = strtok_r(NULL, "\n", &save_ptr);
           db_put(req_key, req_val, &db_get_val, &val_size);
-          strncpy(req_cont->result, db_get_val, val_size);
+          strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
         case INSERT:
           req_val = strtok_r(NULL, "\n", &save_ptr);
           db_insert(req_key, req_val, &db_get_val, &val_size);
-          strncpy(req_cont->result, db_get_val, val_size);
+          strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
         case DELETE:
           db_delete(req_key, &db_get_val, &val_size);
-          strncpy(req_cont->result, db_get_val, val_size);
+          strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
       }
 //TODO: write to pipe
-
       v = (union sigval *) malloc(sizeof(union sigval));
-      v->sival_ptr = req_cont;
+      v->sival_ptr = pending_head->cont;
       sigqueue(my_pid, SIGRTMIN + 4, *v); // send signal to main thread
-
-      // int pipe_write_res;
-      // pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//
-      // if (pipe_write_res < 0) {
-      //   perror("write");
-      // }
-      // struct pending_queue *dead_head = pending_head;
-      // pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
-      // free(dead_head);
+      struct pending_queue *dead_head = pending_head;
+      pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
+      free(dead_head);
       free(db_get_val);
       free(req_str);
-    // }
+    }
     db_cleanup();
     pthread_mutex_unlock(&lock);
   }
