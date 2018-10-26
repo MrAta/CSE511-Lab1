@@ -76,13 +76,13 @@ void setup_request_type(char *s, char **tec, struct continuation *tmp) {
     memcpy(*tec, "NULL", 5);
   } else if (strcmp(s, "INSERT") == 0) {
     tmp->request_type = INSERT;
-    memcpy(*tec, "-1", 3);
+    memcpy(*tec, "-2", 3);
   } else if (strcmp(s, "DELETE") == 0) {
     tmp->request_type = DELETE;
-    memcpy(*tec, "-1", 3);
+    memcpy(*tec, "-3", 3);
   } else {
     tmp->request_type = INVALID;
-    memcpy(*tec, "-1", 3);
+    memcpy(*tec, "-4", 3);
   }
 }
 
