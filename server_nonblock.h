@@ -45,5 +45,5 @@ int initial_server_fd;
 pid_t my_pid;
 pthread_t main_tid;
 union sigval *v;
-
+int pipe_fd[2];
 #endif //P1_CSRF_SERVER_NONBLOCK_H

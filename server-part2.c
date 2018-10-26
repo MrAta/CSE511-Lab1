@@ -201,6 +201,8 @@ void event_loop_scheduler_2() {
 
   //creating main thread fd
   initial_server_fd = server_func_2();
+  make_socket_non_blocking_2(initial_server_fd);
+  
 
   int retval;
   //our reading set for select
@@ -311,6 +313,7 @@ void event_loop_scheduler_2() {
         //perfom the request:
 
         if (temp->request_type == GET) {
+          struct node * temp_node;
           if (( temp_node = cache_get(req_key)) != NULL) { // check cache
             printf("\nGET result found in cache\n\n");
             strcpy(temp->result, temp_node->defn);

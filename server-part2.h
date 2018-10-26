@@ -10,7 +10,7 @@
 
 #define PORT 8080
 
-int initial_server_fd, pipe_fd[2];
+int initial_server_fd;
 pid_t my_pid;
 union sigval *v;
 
