@@ -29,7 +29,9 @@ int server_1_get_request(char *key, char **ret_buffer, int *ret_size) {
   if (db_get(key, ret_buffer, ret_size)) {
     return EXIT_FAILURE;
   }
-  cache_put(key, *ret_buffer);
+  if (strcmp(*ret_buffer, "NOTFOUND") != 0) { // if result was NULL there was some kind of error
+    cache_put(key, *ret_buffer);
+  }
   return EXIT_SUCCESS;
 }
 
@@ -38,16 +40,27 @@ int server_1_put_request(char *key, char *value, char **ret_buffer, int *ret_siz
   if (db_put(key, value, ret_buffer, ret_size)) {
     return EXIT_FAILURE;
   }
-  cache_put(key, value);
+  if (strcmp(*ret_buffer, "NOTFOUND") != 0) {
+    cache_put(key, value);
+  }
   return EXIT_SUCCESS;
 }
 
 int server_1_insert_request(char *key, char *value, char **ret_buffer, int *ret_size) {
+  if (cache_get(key) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
+    printf("%s\n", "error: duplicate req_key violation");
+    // TODO: update timings
+    *ret_buffer = calloc(1024, sizeof(char *));
+    *ret_buffer = "DUPLICATE";
+    return EXIT_FAILURE;
+  }
   // Always perform IO
   if (db_insert(key, value, ret_buffer, ret_size)) {
     return EXIT_FAILURE;
   }
-  cache_put(key, value);
+  if (strcmp(*ret_buffer, "DUPLICATE") != 0) {
+    cache_put(key, value);
+  }
   return EXIT_SUCCESS;
 }
 
@@ -56,7 +69,9 @@ int server_1_delete_request(char *key, char **ret_buffer, int *ret_size) {
   if (db_delete(key, ret_buffer, ret_size)) {
     return EXIT_FAILURE;
   }
-  cache_invalidate(key);
+  if (strcmp(*ret_buffer, "NOTFOUND") != 0) {
+    cache_invalidate(key);
+  }
   return EXIT_SUCCESS;
 }
 
