@@ -254,6 +254,7 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   }
 
   send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
+  close(req_cont->fd);
   free(req_string);
   free(req_cont); // frees the cont that was just executed
 
