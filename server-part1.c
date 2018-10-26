@@ -102,6 +102,7 @@ void *server_handler(void *arg) {
   free(input_line);
   free(arg);
   printf("Done handling request\n");
+  close(sockfd);
   return NULL;
 }
 
