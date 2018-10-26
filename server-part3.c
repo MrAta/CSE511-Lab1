@@ -103,23 +103,21 @@ void setup_request_type(char *s, char **tec, struct continuation *tmp) {
   task queue
 */
 void issue_io_req_3(struct continuation *tmp) {
-  int pipe_write_res;
-  pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//
-  if (pipe_write_res < 0) {
-    perror("write");
-  }
   // pthread_mutex_lock(&lock);
-  // pending_node = (struct pending_queue *) malloc(sizeof(struct pending_queue));
-  // pending_node->cont = tmp;
-  // pending_node->next = NULL;
-  // if (pending_head == NULL) {
-  //   pending_head = pending_tail = pending_node;
-  // } else {
-  //   pending_tail->next = pending_node;
-  //   pending_tail = pending_node;
-  // }
+  pending_node = (struct pending_queue *) malloc(sizeof(struct pending_queue));
+  pending_node->cont = tmp;
+  pending_node->next = NULL;
+  if (pending_head == NULL) {
+    pending_head = pending_tail = pending_node;
+  } else {
+    pending_tail->next = pending_node;
+    pending_tail = pending_node;
+  }
   // pthread_mutex_unlock(&lock);
+}
 
+static void handle_sig_pipe(int sig, siginfo_t *si, void *data) {
+  fcntl(si->si_value.sival_int, F_SETSIG, SIGIO);
 }
 
 static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
@@ -127,6 +125,9 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
 //if its main socket accept and read it
 //else just read
 // si->si_valu.sival_int == fd
+
+  // if (*(char *)data == '\a') return;
+
   if(si->si_value.sival_int == initial_server_fd){
     printf("ATA: Main thread\n" );
     int valread, incoming;
@@ -148,6 +149,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     tmp->start_time = time(0);
     memset(tmp->buffer, 0, MAX_ENTRY_SIZE);
     valread = read(incoming, tmp->buffer, MAX_ENTRY_SIZE);
+
     //make incomming non setnonblockin
     //attach a signal
     int fl;
@@ -156,6 +158,8 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     fcntl(incoming, F_SETFL, fl);
     fcntl(incoming, F_SETSIG, SIGRTMIN + 3);
     fcntl(incoming, F_SETOWN, getpid());
+
+    if (valread < 0) return;
 
     req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
     strcpy(req_string, tmp->buffer);
@@ -478,6 +482,12 @@ void *setup_sigs_and_exec_thread() {
     sigemptyset(&react.sa_mask);
     react.sa_flags = SA_SIGINFO;
     sigaction(SIGRTMIN + 4, &react, NULL);
+
+    struct sigaction act2;
+    act2.sa_sigaction = handle_sig_pipe;
+    sigemptyset(&act2.sa_mask);
+    act2.sa_flags = SA_SIGINFO;
+    sigaction(SIGPIPE, &act2, NULL);
 
     event_loop_scheduler_3();
   }
