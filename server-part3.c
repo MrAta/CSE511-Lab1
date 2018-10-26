@@ -129,6 +129,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     tmp = (struct continuation *) malloc(sizeof(struct continuation));
     tmp->start_time = time(0);
     memset(tmp->buffer, 0, MAX_ENTRY_SIZE);
+    // TODO: Is this not a blocking read?
     valread = read(incoming, tmp->buffer, MAX_ENTRY_SIZE);
     //make incomming non setnonblockin
     //attach a signal
