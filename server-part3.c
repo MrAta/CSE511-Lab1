@@ -52,7 +52,7 @@ void io_thread_func_3() {
           strncpy(pending_head->cont->result, db_get_val, val_size);
           break;
       }
-
+//TODO: write to pipe
       v = (union sigval *) malloc(sizeof(union sigval));
       v->sival_ptr = pending_head->cont;
       sigqueue(my_pid, SIGRTMIN + 4, *v); // send signal to main thread
@@ -124,6 +124,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     struct node *tmp_node = NULL;
 
     incoming = accept(initial_server_fd, (struct sockaddr *) &in, &sz);
+    make_socket_non_blocking_3(incoming);
 
     tmp = (struct continuation *) malloc(sizeof(struct continuation));
     tmp->start_time = time(0);
@@ -326,7 +327,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
 static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
 
   // update time measurements and cache in this func
-
+  //TODO: read from the pipe
   struct continuation *req_cont = (struct continuation *) si->si_value.sival_ptr;
   char *req_string = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
   char *req_type = NULL;
