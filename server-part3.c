@@ -23,45 +23,57 @@ void io_thread_func_3() {
     pthread_mutex_lock(&lock);
     db_connect();
 
-    if (pending_head != NULL) {
-
+    // if (pending_head != NULL) {
+      struct continuation *req_cont = (struct continuation *) malloc(sizeof(struct continuation));
       req_str = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
-      strcpy(req_str, pending_head->cont->buffer);
+      // strcpy(req_str, pending_head->cont->buffer);
+      int read_pipe_res;
+      read_pipe_res = read(pipe_fd[0], req_cont, sizeof(struct continuation));
+      if (read_pipe_res < 0) {
+        perror("read");
+      }
 
       // at this point request in buffer is valid string
       strtok_r(req_str, " ", &save_ptr);
       req_key = strtok_r(NULL, " ", &save_ptr);
 
-      switch (pending_head->cont->request_type) {
+      switch (req_cont->request_type) {
         case GET:
           db_get(req_key, &db_get_val, &val_size);
-          strncpy(pending_head->cont->result, db_get_val, val_size + 1);
+          strncpy(req_cont->result, db_get_val, val_size + 1);
           break;
         case PUT:
           req_val = strtok_r(NULL, "\n", &save_ptr);
           db_put(req_key, req_val, &db_get_val, &val_size);
-          strncpy(pending_head->cont->result, db_get_val, val_size);
+          strncpy(req_cont->result, db_get_val, val_size);
           break;
         case INSERT:
           req_val = strtok_r(NULL, "\n", &save_ptr);
           db_insert(req_key, req_val, &db_get_val, &val_size);
-          strncpy(pending_head->cont->result, db_get_val, val_size);
+          strncpy(req_cont->result, db_get_val, val_size);
           break;
         case DELETE:
           db_delete(req_key, &db_get_val, &val_size);
-          strncpy(pending_head->cont->result, db_get_val, val_size);
+          strncpy(req_cont->result, db_get_val, val_size);
           break;
       }
 //TODO: write to pipe
+
       v = (union sigval *) malloc(sizeof(union sigval));
-      v->sival_ptr = pending_head->cont;
+      v->sival_ptr = req_cont;
       sigqueue(my_pid, SIGRTMIN + 4, *v); // send signal to main thread
-      struct pending_queue *dead_head = pending_head;
-      pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
-      free(dead_head);
+
+      // int pipe_write_res;
+      // pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//
+      // if (pipe_write_res < 0) {
+      //   perror("write");
+      // }
+      // struct pending_queue *dead_head = pending_head;
+      // pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
+      // free(dead_head);
       free(db_get_val);
       free(req_str);
-    }
+    // }
     db_cleanup();
     pthread_mutex_unlock(&lock);
   }
@@ -91,17 +103,23 @@ void setup_request_type(char *s, char **tec, struct continuation *tmp) {
   task queue
 */
 void issue_io_req_3(struct continuation *tmp) {
-  pthread_mutex_lock(&lock);
-  pending_node = (struct pending_queue *) malloc(sizeof(struct pending_queue));
-  pending_node->cont = tmp;
-  pending_node->next = NULL;
-  if (pending_head == NULL) {
-    pending_head = pending_tail = pending_node;
-  } else {
-    pending_tail->next = pending_node;
-    pending_tail = pending_node;
+  int pipe_write_res;
+  pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//
+  if (pipe_write_res < 0) {
+    perror("write");
   }
-  pthread_mutex_unlock(&lock);
+  // pthread_mutex_lock(&lock);
+  // pending_node = (struct pending_queue *) malloc(sizeof(struct pending_queue));
+  // pending_node->cont = tmp;
+  // pending_node->next = NULL;
+  // if (pending_head == NULL) {
+  //   pending_head = pending_tail = pending_node;
+  // } else {
+  //   pending_tail->next = pending_node;
+  //   pending_tail = pending_node;
+  // }
+  // pthread_mutex_unlock(&lock);
+
 }
 
 static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
@@ -129,7 +147,6 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     tmp = (struct continuation *) malloc(sizeof(struct continuation));
     tmp->start_time = time(0);
     memset(tmp->buffer, 0, MAX_ENTRY_SIZE);
-    // TODO: Is this not a blocking read?
     valread = read(incoming, tmp->buffer, MAX_ENTRY_SIZE);
     //make incomming non setnonblockin
     //attach a signal
@@ -217,9 +234,10 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     free(tmp_err_code);
     free(req_string);
   }
+  // else if()
   else{
     printf("ATA: conns\n" );
-    int valread; //, incoming;
+    int valread, incoming;
     char *req_string;
     char *req_type = NULL;
     char *req_key = NULL;
@@ -249,8 +267,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     strcpy(req_string, tmp->buffer);
 
     memset(tmp->result, 0, MAX_ENTRY_SIZE);
-    // tmp->fd = incoming;
-    tmp->fd = si->si_value.sival_int;
+    tmp->fd = incoming;
 
     if (( req_type = strtok_r(req_string, " ", &save_ptr)) == NULL) { // will ensure strlen>0
       printf("%s\n", "bad client request: req_type");
@@ -326,11 +343,58 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
 
 }
 
+
+void on_read_from_pipe_3() {
+  char *save_ptr;
+  struct continuation *req_cont = (struct continuation *) malloc(sizeof(struct continuation));//TODO
+  int read_pipe_res;
+  read_pipe_res = read(pipe_fd[0], req_cont, sizeof(struct continuation));
+  if (read_pipe_res < 0) {
+    perror("read");
+  }
+  char *req_string = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
+  char *req_type = NULL;
+  char *req_key = NULL;
+  char *val = NULL;
+  strcpy(req_string, req_cont->buffer); // buffer includes null byte
+  req_type = strtok_r(req_string, " ", &save_ptr);
+  req_key = strtok_r(NULL, " ", &save_ptr);
+  if (req_cont->request_type == GET) {
+    // TODO: update time measurements
+    if (strcmp(req_cont->result, "NOTFOUND") != 0) { // if result was NULL there was some kind of error
+      cache_put(req_key, req_cont->result);
+    }
+  } else if (req_cont->request_type == PUT) {
+    // TODO: update time measurements
+    if (strcmp(req_cont->result, "NOTFOUND") != 0) {
+      val = strtok_r(NULL, " ", &save_ptr);
+      cache_put(req_key, val);
+    }
+
+  } else if (req_cont->request_type == INSERT) {
+    // TODO: update time measurements
+    if (strcmp(req_cont->result, "DUPLICATE") != 0) {
+      val = strtok_r(NULL, " ", &save_ptr);
+      cache_put(req_key, val);
+    }
+  } else { // DELETE
+    // TODO: update time measurements
+    if (strcmp(req_cont->result, "NOTFOUND") != 0) {
+
+      cache_invalidate(req_key);
+    }
+  }
+
+  send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
+  free(req_string);
+  free(req_cont); // frees the cont that was just executed
+}
 static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
 
   // update time measurements and cache in this func
   //TODO: read from the pipe
-  struct continuation *req_cont = (struct continuation *) si->si_value.sival_ptr;
+   struct continuation *req_cont = (struct continuation *) si->si_value.sival_ptr;
+
   char *req_string = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
   char *req_type = NULL;
   char *req_key = NULL;
@@ -369,6 +433,7 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
   free(req_string);
   free(req_cont); // frees the cont that was just executed
+  // on_read_from_pipe_3();
 }
 
 static int make_socket_non_blocking_3(int sfd) {
@@ -448,7 +513,14 @@ int server_func_3() {
 }
 
 void event_loop_scheduler_3() {
+  int pipe_res;
+  pipe_res = pipe(pipe_fd);
+  if (pipe_res < 0) {
+    perror("pipe");
+    exit(EXIT_FAILURE);
+  }
   initial_server_fd = server_func_3();
+  make_socket_non_blocking_3(initial_server_fd);
   int fl;
 
   fl = fcntl(initial_server_fd, F_GETFL);
