@@ -324,7 +324,7 @@ void event_loop_scheduler_2() {
         } else if (temp->request_type == PUT) {
           if (( req_val = strtok_r(NULL, " ", &save_ptr)) == NULL) {
             printf("%s\n", "bad client request: req_val");
-            send(tmp->fd, tmp->result, strlen(tmp->result), 0);
+            send(temp->fd, temp->result, strlen(temp->result), 0);
             free(req_string);
             continue;
           }
@@ -332,14 +332,14 @@ void event_loop_scheduler_2() {
         } else if (temp->request_type == INSERT) {
           if (( req_val = strtok_r(NULL, " ", &save_ptr)) == NULL) {
             printf("%s\n", "bad client request: req_val");
-            send(tmp->fd, tmp->result, strlen(tmp->result), 0);
+            send(temp->fd, temp->result, strlen(temp->result), 0);
             free(req_string);
             continue;
           }
           if (( temp_node = cache_get(req_key)) !=
               NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
             printf("%s\n", "error: duplicate req_key violation");
-            send(tmp->fd, tmp->result, strlen(tmp->result), 0);
+            send(temp->fd, temp->result, strlen(temp->result), 0);
             free(req_string);
             continue;
           }
@@ -347,7 +347,7 @@ void event_loop_scheduler_2() {
         } else if (temp->request_type == DELETE) {
           issue_io_req_2(); // issue io request to find out if req_key is in db to delete
         } else {
-          send(tmp->fd, tmp->result, strlen(tmp->result), 0);
+          send(temp->fd, temp->result, strlen(temp->result), 0);
           free(req_string);
           continue;
         }
