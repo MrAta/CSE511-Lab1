@@ -51,8 +51,8 @@ int server_1_insert_request(char *key, char *value, char **ret_buffer, int *ret_
     printf("%s\n", "error: duplicate req_key violation");
     // TODO: update timings
     *ret_buffer = calloc(1024, sizeof(char *));
-    *ret_buffer = "DUPLICATE";
-    *ret_size = 8;
+    strcpy(*ret_buffer, "DUPLICATE");
+    *ret_size = 9;
     return EXIT_FAILURE;
   }
   // Always perform IO
