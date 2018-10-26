@@ -32,7 +32,7 @@ void *client_func() {
   printf("REQUEST SENT: %s\n", hello[0]);
   valread = read( sock , buffer, 1024);
   printf("RESPONSE: %s\n",buffer );
-
+  close(sock);
 }
 
 int main(int argc, char const *argv[])
