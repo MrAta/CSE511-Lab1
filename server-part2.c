@@ -277,6 +277,7 @@ void event_loop_scheduler_2() {
         memset(temp->buffer, 0, MAX_ENTRY_SIZE);
 
         valread = read(events[i].data.fd, temp->buffer, MAX_ENTRY_SIZE);
+        if(valread < 0 ) continue;
         req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
         strcpy (req_string, temp->buffer);
 
