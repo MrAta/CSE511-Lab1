@@ -38,7 +38,7 @@ void *client_func() {
 
 int main(int argc, char const *argv[])
 {
-    pthread_t client_thread;
+    pthread_t client_thread[10];
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
 
@@ -54,9 +54,10 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    pthread_create(&client_thread, NULL, client_func, NULL);
-
-    pthread_join(client_thread, NULL);
+    for (int i=0; i< 10; i++)
+    pthread_create(&client_thread[i], NULL, client_func, NULL);
+for (int i=0; i< 10; i++)
+    pthread_join(client_thread[i], NULL);
 
     return 0;
 }
