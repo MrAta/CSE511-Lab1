@@ -124,7 +124,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     struct node *tmp_node = NULL;
 
     incoming = accept(initial_server_fd, (struct sockaddr *) &in, &sz);
-    // make_socket_non_blocking_3(incoming);
+    make_socket_non_blocking_3(incoming);
 
     tmp = (struct continuation *) malloc(sizeof(struct continuation));
     tmp->start_time = time(0);
