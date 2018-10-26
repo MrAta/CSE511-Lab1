@@ -365,7 +365,7 @@ int run_server_2(void) {
   my_pid = getpid();
 
   pending_head = pending_tail = NULL;
-  head = tail = curr = temp_node = NULL;
+  head = tail = temp_node = NULL;
 
   // file = fopen("names.txt", "r+");
 

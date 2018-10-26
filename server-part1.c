@@ -175,7 +175,7 @@ int loop_and_listen_1() {
 
 int run_server_1() {
   // Load database
-  head = tail = curr = temp_node = NULL;
+  head = tail = temp_node = NULL;
 
   if (loop_and_listen_1()) {
     return EXIT_FAILURE;
