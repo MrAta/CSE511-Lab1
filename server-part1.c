@@ -67,32 +67,33 @@ void *server_handler(void *arg) {
   char *input_line = (char *) calloc(1024, sizeof(char *));
   char *tokens, *response = NULL, *key, *value, *save_ptr;
   int response_size;
-  read(sockfd, input_line, 1024);
-  printf("Read data: %s\n", input_line);
+  while (read(sockfd, input_line, 1024)) {
+    printf("Read data: %s\n", input_line);
 
-  tokens = strtok_r(input_line, " ", &save_ptr);
-  key = strtok_r(NULL, " ", &save_ptr);
-  value = strtok_r(NULL, " ", &save_ptr);
-  if(tokens == NULL || key == NULL) {
-    db_cleanup();
-    free(input_line);
-    free(arg);
-    return NULL;
-  }
-  if (strncmp(tokens, "GET", 3) == 0) {
-    server_1_get_request(key, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else if (strncmp(tokens, "PUT", 3) == 0) {
-    server_1_put_request(key, value, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else if (strncmp(tokens, "INSERT", 6) == 0) {
-    server_1_insert_request(key, value, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else if (strncmp(tokens, "DELETE", 6) == 0) {
-    server_1_delete_request(key, &response, &response_size);
-    write(sockfd, response, (size_t) response_size);
-  } else {
-    write(sockfd, "ERROR", 6);
+    tokens = strtok_r(input_line, " ", &save_ptr);
+    key = strtok_r(NULL, " ", &save_ptr);
+    value = strtok_r(NULL, " ", &save_ptr);
+    if (tokens == NULL || key == NULL) {
+      db_cleanup();
+      free(input_line);
+      free(arg);
+      return NULL;
+    }
+    if (strncmp(tokens, "GET", 3) == 0) {
+      server_1_get_request(key, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else if (strncmp(tokens, "PUT", 3) == 0) {
+      server_1_put_request(key, value, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else if (strncmp(tokens, "INSERT", 6) == 0) {
+      server_1_insert_request(key, value, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else if (strncmp(tokens, "DELETE", 6) == 0) {
+      server_1_delete_request(key, &response, &response_size);
+      write(sockfd, response, (size_t) response_size);
+    } else {
+      write(sockfd, "ERROR", 6);
+    }
   }
   db_cleanup();
   if (response != NULL) {
