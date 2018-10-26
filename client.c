@@ -116,7 +116,7 @@ void *client_func() {
       printf("\nConnection Failed \n");
       exit(0);
   }
- for(int i=0; i < 6; i++){
+for(int i=0; i < 6; i++){
   clock_t t;
   t = clock();
   send(sock , hello[0] , strlen(hello[0]) , 0 );
@@ -125,7 +125,7 @@ void *client_func() {
   t = clock() - t;
   double time_taken = ((double)t)/CLOCKS_PER_SEC;
   printf("RESPONSE: %s took %f\n",buffer,  time_taken);
- }
+}
 
 }
 
@@ -151,7 +151,7 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
- //   for(int i=0; i<10; i++)
+    // for(int i=0; i<10; i++)
     client_func();
     // pthread_create(&client_thread[i], NULL, client_func, NULL);
 // for(int i=0; i<10; i++)
