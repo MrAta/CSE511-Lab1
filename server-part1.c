@@ -77,13 +77,12 @@ int server_1_delete_request(char *key, char **ret_buffer, int *ret_size) {
 }
 
 void *server_handler(void *arg) {
-  db_connect();
   int sockfd = *(int *) arg;
   char *input_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char *));
   char *tokens, *response = NULL, *key, *value, *save_ptr;
   int response_size;
   while (read(sockfd, input_line, MAX_ENTRY_SIZE)) {
-
+    db_connect();
     tokens = strtok_r(input_line, " ", &save_ptr);
     key = strtok_r(NULL, " ", &save_ptr);
     value = strtok_r(NULL, " ", &save_ptr);
@@ -108,12 +107,10 @@ void *server_handler(void *arg) {
     } else {
       write(sockfd, "ERROR", 6);
     }
-  }
-  db_cleanup();
-  if (response != NULL) {
+    db_cleanup();
     free(response);
+    free(input_line);
   }
-  free(input_line);
   free(arg);
   close(sockfd);
   return NULL;
