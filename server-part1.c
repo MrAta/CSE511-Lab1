@@ -160,7 +160,7 @@ int loop_and_listen_1() {
       perror("Could not accept connection");
       continue;
     }
-    new_sock = malloc(1);
+    new_sock = malloc(4);
     *new_sock = newsockfd;
     pthread_t *handler_thread = (pthread_t *) malloc(sizeof(pthread_t));
     if (pthread_create(handler_thread, NULL, server_handler, (void *) new_sock) != 0) {
