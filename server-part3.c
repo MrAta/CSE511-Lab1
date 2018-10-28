@@ -546,7 +546,7 @@ int run_server_3(void) {
 
   pending_head = pending_tail = NULL;
   head = tail = temp_node = NULL;
-
+  db_init();
   // Creating I/O thread pool
   for (int i = 0; i < THREAD_POOL_SIZE; i++) {
     pthread_create(&io_thread[i], NULL, setup_sigs_and_exec_thread, NULL);

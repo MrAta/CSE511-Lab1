@@ -87,6 +87,7 @@ void *server_handler(void *arg) {
     key = strtok_r(NULL, " ", &save_ptr);
     value = strtok_r(NULL, " ", &save_ptr);
     if (tokens == NULL || key == NULL) {
+      printf("Invalid key/command received\n");
       db_cleanup();
       free(input_line);
       free(arg);
@@ -110,8 +111,13 @@ void *server_handler(void *arg) {
     db_cleanup();
     free(response);
     free(input_line);
+    input_line = NULL;
+    input_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char *));
+    response = NULL;
   }
   free(arg);
+  free(input_line);
+  input_line = NULL;
   close(sockfd);
   return NULL;
 }
@@ -173,6 +179,7 @@ int loop_and_listen_1() {
 int run_server_1() {
   // Load database
   head = tail = temp_node = NULL;
+  db_init();
 
   if (loop_and_listen_1()) {
     return EXIT_FAILURE;

@@ -8,7 +8,7 @@
 #define SIGRTMIN        (__libc_current_sigrtmin ())
 #define SIGRTMAX        (__libc_current_sigrtmax ())
 
-#define PORT 8080
+#define PORT 8085
 
 int initial_server_fd;
 pid_t my_pid;

@@ -366,7 +366,7 @@ int run_server_2(void) {
 
   pending_head = pending_tail = NULL;
   head = tail = temp_node = NULL;
-
+  db_init();
   // file = fopen("names.txt", "r+");
 
 
