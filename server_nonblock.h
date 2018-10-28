@@ -28,7 +28,7 @@
 
 struct continuation {
   int request_type;
-  char buffer[1024];
+  char buffer[MAX_ENTRY_SIZE];
   int fd;
   char result[MAX_VALUE_SIZE];
   time_t start_time, finish_time;

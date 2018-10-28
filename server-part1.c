@@ -20,7 +20,7 @@ int server_1_get_request(char *key, char **ret_buffer, int *ret_size) {
   cache_lookup = cache_get(key);
   if (cache_lookup != NULL) {
     // HIT
-    *ret_buffer = calloc(1024, sizeof(char *));
+    *ret_buffer = calloc(MAX_ENTRY_SIZE, sizeof(char *));
     strcpy(*ret_buffer, cache_lookup->defn);
     *ret_size = (int) strlen(*ret_buffer);
     return 0;
@@ -50,7 +50,7 @@ int server_1_insert_request(char *key, char *value, char **ret_buffer, int *ret_
   if (cache_get(key) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
     printf("%s\n", "error: duplicate req_key violation");
     // TODO: update timings
-    *ret_buffer = calloc(1024, sizeof(char *));
+    *ret_buffer = calloc(MAX_ENTRY_SIZE, sizeof(char *));
     strcpy(*ret_buffer, "DUPLICATE");
     *ret_size = 9;
     return EXIT_FAILURE;
@@ -77,17 +77,17 @@ int server_1_delete_request(char *key, char **ret_buffer, int *ret_size) {
 }
 
 void *server_handler(void *arg) {
-  db_connect();
   int sockfd = *(int *) arg;
   char *input_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char *));
   char *tokens, *response = NULL, *key, *value, *save_ptr;
   int response_size;
   while (read(sockfd, input_line, MAX_ENTRY_SIZE)) {
-
+    db_connect();
     tokens = strtok_r(input_line, " ", &save_ptr);
     key = strtok_r(NULL, " ", &save_ptr);
     value = strtok_r(NULL, " ", &save_ptr);
     if (tokens == NULL || key == NULL) {
+      printf("Invalid key/command received\n");
       db_cleanup();
       free(input_line);
       free(arg);
@@ -108,13 +108,16 @@ void *server_handler(void *arg) {
     } else {
       write(sockfd, "ERROR", 6);
     }
-  }
-  db_cleanup();
-  if (response != NULL) {
+    db_cleanup();
     free(response);
+    free(input_line);
+    input_line = NULL;
+    input_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char *));
+    response = NULL;
   }
-  free(input_line);
   free(arg);
+  free(input_line);
+  input_line = NULL;
   close(sockfd);
   return NULL;
 }
@@ -163,7 +166,7 @@ int loop_and_listen_1() {
       perror("Could not accept connection");
       continue;
     }
-    new_sock = malloc(1);
+    new_sock = malloc(4);
     *new_sock = newsockfd;
     pthread_t *handler_thread = (pthread_t *) malloc(sizeof(pthread_t));
     if (pthread_create(handler_thread, NULL, server_handler, (void *) new_sock) != 0) {
@@ -176,6 +179,7 @@ int loop_and_listen_1() {
 int run_server_1() {
   // Load database
   head = tail = temp_node = NULL;
+  db_init();
 
   if (loop_and_listen_1()) {
     return EXIT_FAILURE;

@@ -9,7 +9,7 @@
 #include <math.h>
 #include <time.h>
 
-#define PORT 8080
+#define PORT 8085
 #define N_KEY 1000 //number of unique keys
 #define a 1.25 //parameter for zipf distribution
 #define key_size 16
@@ -108,9 +108,10 @@ int reqnum = 4;
 
 struct sockaddr_in *serv_addr;
 
-void client_func(int i) {
+void *client_func(void * n) {
   int sock = 0, valread;
 
+for (int i = 0; i < 2500; i++) {
   char buffer[1024] = { 0 };
 
   if (( sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -136,7 +137,7 @@ void client_func(int i) {
   close(sock);
   printf("%d. RESPONSE: %s took %f\n", i, buffer, time_taken);
 // }
-
+}
 }
 
 int main(int argc, char const *argv[]) {
@@ -154,17 +155,19 @@ int main(int argc, char const *argv[]) {
   serv_addr->sin_port = htons(PORT);
 
   // Convert IPv4 and IPv6 addresses from text to binary form
-  if (inet_pton(AF_INET, "127.0.0.1", &serv_addr->sin_addr) <= 0) {
+  if (inet_pton(AF_INET, "130.203.16.21", &serv_addr->sin_addr) <= 0) {
     printf("\nInvalid address/ Address not supported \n");
     return -1;
   }
 
-  for (int i = 0; i < 2500; i++) {
-    client_func(i);
-  }
-  // pthread_create(&client_thread[i], NULL, client_func, NULL);
-// for(int i=0; i<10; i++)
-  // pthread_join(client_thread[i], NULL);
-
+  //for (int i = 0; i < 2500; i++) {
+  //  client_func(i);
+  //}
+  //pthread_create(&client_thread[i], NULL, client_func, NULL);
+  for(int i=0; i<10; i++){
+  pthread_create(&client_thread[i], NULL, client_func, NULL);
+}
+for (int i=0; i<10; i++) 
+   pthread_join(client_thread[i], NULL);
   return 0;
 }

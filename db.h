@@ -23,6 +23,7 @@ FILE *file;
 
 extern char *filename;
 
+void db_init();
 void db_connect();
 void db_cleanup();
 /**
