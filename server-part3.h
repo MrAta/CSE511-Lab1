@@ -12,7 +12,6 @@
 #define SIGRTMIN        (__libc_current_sigrtmin ())
 #define SIGRTMAX        (__libc_current_sigrtmax ())
 
-#define PORT 8085
 
 #define NEW_CONN "0"
 #define EXISTING_CONN "1"
