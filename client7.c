@@ -9,7 +9,7 @@
 #include <math.h>
 #include <time.h>
 
-#define PORT 8080
+#define PORT 8085
 #define N_KEY 1000 //number of unique keys
 #define a 1.25 //parameter for zipf distribution
 #define key_size 16

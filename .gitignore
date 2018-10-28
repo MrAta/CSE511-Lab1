@@ -17,3 +17,10 @@ server
 run
 deb
 l1
+.server_nonblock.h.swp
+client6
+client7
+client8
+l2
+l3
+l4

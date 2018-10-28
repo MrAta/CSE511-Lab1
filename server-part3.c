@@ -91,6 +91,7 @@ void issue_io_req_3(struct continuation *tmp) {
 }
 
 static void handle_sig_pipe(int sig, siginfo_t *si, void *data) {
+  // printf("==============in sigpipe handler=================");
   fcntl(si->si_value.sival_int, F_SETSIG, SIGIO);
   close(si->si_value.sival_int);
 }
@@ -99,14 +100,13 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
   incoming_events++;
   char fd_buf[4];
   if(si->si_value.sival_int == initial_server_fd) { // if signal on main socket
-    write(sig_handler_pipe[1], NEW_CONN, 1); // write type (new connection? existing conn?), and fd to pipe
+    write(sig_handler_pipe[1], NEW_CONN, 1); // write type
     bytes_written_to_pipe++;
-    printf("bytes written to pipe: %d\n", bytes_written_to_pipe);
   } else { // signal for some other socket
-    write(sig_handler_pipe[1], EXISTING_CONN, 1); // write type (new connection? existing conn?), and fd to pipe
+    write(sig_handler_pipe[1], EXISTING_CONN, 1); 
     write(sig_handler_pipe[1], &(si->si_value.sival_int), sizeof(int));
+    printf("si->si_value.sival_int: %d\n", si->si_value.sival_int);
     bytes_written_to_pipe += 5;
-    printf("bytes written to pipe: %d\n", bytes_written_to_pipe);
   }
 }
 
@@ -115,6 +115,7 @@ void incoming_connection_handler_3_helper_new() {
   struct sockaddr_in in;
   socklen_t sz = sizeof(in);
   incoming = accept(initial_server_fd, (struct sockaddr *) &in, &sz);
+  if (incoming == -1) { perror(strerror(errno)); }
   int fl;
   fl = fcntl(incoming, F_GETFL);
   fl |= O_ASYNC | O_NONBLOCK; // send a signal to main thread on fd ready
@@ -141,7 +142,10 @@ void incoming_connection_handler_3_helper(int sock) {
   memset(tmp->buffer, 0, MAX_ENTRY_SIZE);
   valread = read(sock, tmp->buffer, MAX_ENTRY_SIZE);
 
-  if (valread <= 0) return;
+  if (valread <= 0) {
+    close(sock);
+    return;
+  }
 
   req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
   strcpy(req_string, tmp->buffer);
@@ -221,7 +225,6 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
   write(sig_handler_pipe[1], OUTGOING_DATA, 1);
   write(sig_handler_pipe[1], &(si->si_value.sival_ptr), sizeof(void *));
   bytes_written_to_pipe += 9;
-  printf("bytes written to pipe: %d\n", bytes_written_to_pipe);
 }
 
 void outgoing_data_handler_3_helper(struct continuation *req_cont) {
@@ -258,7 +261,9 @@ void outgoing_data_handler_3_helper(struct continuation *req_cont) {
     }
   }
 
-  send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0);
+  if ((send(req_cont->fd, req_cont->result, strlen(req_cont->result), 0) != strlen(req_cont->result))) {
+    printf("not fully sent");
+  }
   free(req_string);
   free(req_cont); // frees the cont that was just executed
 
@@ -335,38 +340,48 @@ void event_loop_scheduler_3() {
     sigprocmask(SIG_BLOCK, &block_rtsigs_set, NULL); // blocks any signals while the event is serviced, new signals are queued up
     if (incoming_events > 0) { // service all events pushed on pipe, in order
       char type[1];
-      char fd_buf[sizeof(int)];
+      // char fd_buf[sizeof(int)];
       int type_bytes_read;
 
+      int bytes_ready = 0;
+      ioctl(sig_handler_pipe[0], FIONREAD, &bytes_ready);
+      // printf("bytes_ready before anything: %d\n", bytes_ready);
+
       type_bytes_read = read(sig_handler_pipe[0], type, 1);
-      printf("type_bytes_read: %d\n", type_bytes_read);
       bytes_read_from_pipe++;
-      printf("bytes read from pipe: %d\n", bytes_read_from_pipe);
       int fd_bytes_read = -1;
       int req_cont_bytes_read = -1;
-      int sock = -1;
+      // int sock = -1;
+      int sock = 0;
       void **req_cont = NULL;
 
       if(strncmp(NEW_CONN, type, 1) == 0) { // if new connection
         incoming_connection_handler_3_helper_new();
       } else if(strncmp(EXISTING_CONN, type, 1) == 0) { // if existing connection
-        fd_bytes_read = read(sig_handler_pipe[0], fd_buf, sizeof(int));
+        // fd_bytes_read = read(sig_handler_pipe[0], fd_buf, sizeof(int));
+        fd_bytes_read = read(sig_handler_pipe[0], &sock, sizeof(int));
         bytes_read_from_pipe += 4;
-        printf("bytes read from pipe: %d\n", bytes_read_from_pipe);
-        sock = atoi(fd_buf);
+        // printf("sock before convert: %s\n", fd_buf);
+        // sock = atoi(fd_buf);
+        // sock = (int)fd_buf;
+        printf("sock in event loop: %d\n", sock);
 
-        if (sock < 3) { // sock should never be < 3 so this needs to be fixed
-          incoming_events--;
-          sigprocmask(SIG_UNBLOCK, &block_rtsigs_set, NULL);
-          continue;
-        }
-
+        // if (sock < 5) {
+        //   if (sock < 3) {
+        //     printf("closing: %d\n", sock);
+        //     close(sock);
+        //   }
+        //   incoming_events--;
+        //   sigprocmask(SIG_UNBLOCK, &block_rtsigs_set, NULL);
+        //   continue;
+        // }
+        ioctl(sig_handler_pipe[0], FIONREAD, &bytes_ready);
+        // printf("bytes_ready before helper: %d\n", bytes_ready);
         incoming_connection_handler_3_helper(sock);
       } else if(strncmp(OUTGOING_DATA, type, 1) == 0) { // if outgoing data
         req_cont = (void **)calloc(sizeof(void *), sizeof(char));
         req_cont_bytes_read = read(sig_handler_pipe[0], req_cont, sizeof(void *));
         bytes_read_from_pipe+=8;
-        printf("bytes read from pipe: %d\n", bytes_read_from_pipe);
         outgoing_data_handler_3_helper((struct continuation *)*req_cont);
         free(req_cont);
       } else {
@@ -431,8 +446,8 @@ int run_server_3(void) {
     exit(EXIT_FAILURE);
   }
 
-  make_socket_non_blocking_3(sig_handler_pipe[0]);
-  make_socket_non_blocking_3(sig_handler_pipe[1]);
+  // make_socket_non_blocking_3(sig_handler_pipe[0]);
+  // make_socket_non_blocking_3(sig_handler_pipe[1]);
 
   setup_sigs_and_exec_thread(); // for main thread
 
@@ -447,3 +462,4 @@ int run_server_3(void) {
 
   return 0;
 }
+

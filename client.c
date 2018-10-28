@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <time.h>
-#define PORT 8080
+#define PORT 8085
 #define N_KEY 1000 //number of unique keys
 #define a 1.25 //parameter for zipf distribution
 #define ratio 0.1 // get/put ratio
@@ -99,7 +99,7 @@ double nextArrival(){
 int nextReqType(){
   double p = (rand() / (RAND_MAX+1.0));
   //req types: 0 indicates get requst, 1 indicates put request
-  if(p <= ratio) return 0
+  if(p <= ratio) return 0;
   return 1;
 
 }
@@ -153,7 +153,7 @@ int main(int argc, char const *argv[])
     serv_addr->sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "130.203.16.21", &serv_addr->sin_addr)<=0)
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr->sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;

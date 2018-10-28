@@ -4,6 +4,8 @@
 #include "server_nonblock.h"
 #include "cache.h"
 #include "db.h"
+#include "errno.h"
+#include "sys/ioctl.h"
 
 #define SIGUNUSED   31
 
