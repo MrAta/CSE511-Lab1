@@ -43,7 +43,7 @@ int db_get(char *key, char **ret_buf, int *ret_len) {
       //continue;
     } else { // end of file (or other error reading); didnt find key
       strcpy(*ret_buf, "NOTFOUND");
-      *ret_len = 13;
+      *ret_len = 8;
       rewind(file);
       return EXIT_FAILURE;
     }
@@ -90,7 +90,7 @@ int db_put(char *key, char *value, char **ret_buf, int *ret_len) {
   found = db_search(key, &fbuf, &fbuf_bytes);
   if (!found) {
     strcpy(*ret_buf, "NOTFOUND"); // key not found in db to do put, return NULL, dont update to file
-    *ret_len = 11;
+    *ret_len = 8;
     free(fbuf);
     fbuf = NULL;
     return EXIT_FAILURE;
@@ -120,7 +120,7 @@ int db_delete(char *key, char **ret_buf, int *ret_len) {
   found = db_search(key, &fbuf, &fbuf_bytes);
   if (!found) {
     strcpy(*ret_buf, "NOTFOUND");
-    *ret_len = 11;
+    *ret_len = 8;
     free(fbuf);
     return EXIT_FAILURE;
   } else { // key found in db, write fbuf to file without that entry
