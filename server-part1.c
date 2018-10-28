@@ -20,7 +20,7 @@ int server_1_get_request(char *key, char **ret_buffer, int *ret_size) {
   cache_lookup = cache_get(key);
   if (cache_lookup != NULL) {
     // HIT
-    *ret_buffer = calloc(1024, sizeof(char *));
+    *ret_buffer = calloc(MAX_ENTRY_SIZE, sizeof(char *));
     strcpy(*ret_buffer, cache_lookup->defn);
     *ret_size = (int) strlen(*ret_buffer);
     return 0;
@@ -50,7 +50,7 @@ int server_1_insert_request(char *key, char *value, char **ret_buffer, int *ret_
   if (cache_get(key) != NULL) { // check if req_key in cache; yes - error: duplicate req_key violation, no - check db
     printf("%s\n", "error: duplicate req_key violation");
     // TODO: update timings
-    *ret_buffer = calloc(1024, sizeof(char *));
+    *ret_buffer = calloc(MAX_ENTRY_SIZE, sizeof(char *));
     strcpy(*ret_buffer, "DUPLICATE");
     *ret_size = 9;
     return EXIT_FAILURE;
