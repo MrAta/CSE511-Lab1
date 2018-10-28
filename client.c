@@ -16,7 +16,7 @@
 #define value_size 84
 long int zeta; //zeta fixed for zipf
 char * keys[N_KEY] = {NULL};
-char * values[N_KEY] = {NULL};
+// char * values[N_KEY] = {NULL};
 double popularities[N_KEY];
 double cdf[N_KEY];
 int arr_rate = 100;
@@ -56,8 +56,8 @@ void generate_key_values(){
   for(int i=0; i< N_KEY; i++){
     char * _key = rand_string_alloc(key_size);
     keys[i] = _key;
-    char * _value = rand_string_alloc(value_size);
-    values[i] = _value;
+    // char * _value = rand_string_alloc(value_size);
+    // values[i] = _value;
     //TODO: do we need to write them in a file?
   }
 }
@@ -142,7 +142,7 @@ int main(int argc, char const *argv[])
     generate_key_values();
     generate_popularities();
     calc_cdf();
-
+    printf("first: %f and last: %f", cdf[0], cdf[N_KEY -1] );
     pthread_t client_thread[10];
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
