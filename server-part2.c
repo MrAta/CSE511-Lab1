@@ -3,7 +3,7 @@
 #define MAX_EVENTS 5000
 int max_fd = 0;
 int addrlen, opt = 1;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock;
 
 void *io_thread_func_2() {
 
@@ -202,7 +202,7 @@ void event_loop_scheduler_2() {
   //creating main thread fd
   initial_server_fd = server_func_2();
   make_socket_non_blocking_2(initial_server_fd);
-
+  
 
   int retval;
   //our reading set for select
