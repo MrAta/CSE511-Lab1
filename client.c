@@ -77,7 +77,7 @@ void calc_cdf(){
 }
 
 char * next_key(){
-  double p = (rand() / (RAND_MAX+1.0));
+  double p = (rand() / (RAND_MAX+1.0))*cdf[N_KEY - 1];
   //TODO: optimize it with binary search
   for(int i=0; i< N_KEY; i++)
     if(p < cdf[i]){
@@ -140,9 +140,12 @@ for(int i=0; i < 6; i++){
 int main(int argc, char const *argv[])
 {
     generate_key_values();
+    zeta = calc_zeta();
     generate_popularities();
     calc_cdf();
     printf("first: %f and last: %f", cdf[0], cdf[N_KEY -1] );
+    for(int i=0; i < 15; i++)
+      printf("%s\n", next_key());
     pthread_t client_thread[10];
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
