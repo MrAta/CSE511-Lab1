@@ -11,8 +11,9 @@
 #define PORT 8080
 #define N_KEY 1000 //number of unique keys
 #define a 1.25 //parameter for zipf distribution
+#define ratio 0.1 // get/put ratio
 #define key_size 16
-#define value_size 100
+#define value_size 84
 long int zeta; //zeta fixed for zipf
 char * keys[N_KEY] = {NULL};
 char * values[N_KEY] = {NULL};
@@ -23,7 +24,7 @@ int arr_type = 1;
 
 static char *rand_string(char *str, size_t size)
 {
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0123456789";
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     if (size) {
         --size;
         for (size_t n = 0; n < size; n++) {
@@ -95,6 +96,13 @@ double nextArrival(){
     return 1/arr_rate; //default: unifrom :D
 }
 
+int nextReqType(){
+  double p = (rand() / (RAND_MAX+1.0));
+  //req types: 0 indicates get requst, 1 indicates put request
+  if(p <= ratio) return 0
+  return 1;
+
+}
 char *hello[] = {"GET Tammy"};//{"GET Atajoon", "GET Clifton", "GET Tammy", "INSERT Sami Pali", "DELETE Tammy", "GET Tammy"};
 
 
