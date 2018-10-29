@@ -263,7 +263,7 @@ int main(int argc, char const *argv[])
     for(int i=0; i<10; i++)
       pthread_join(client_thread[i], NULL);
     gettimeofday(&atve, NULL);
-    double a_time_taken = c
+    double a_time_taken = (double) (atve.tv_usec - atvs.tv_usec) / 1000000 + (double) (atve.tv_sec - atvs.tv_sec);
     double w_time_taken = (double) (wtve.tv_usec - wtvs.tv_usec) / 1000000 + (double) (wtve.tv_sec - wtvs.tv_sec);
     printf("Finished running the workload.\n");
     printf("Inserting all keys took: %f\n", w_time_taken);
