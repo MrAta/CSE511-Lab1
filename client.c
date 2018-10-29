@@ -31,12 +31,13 @@ FILE *fp;
 
 static char *rand_string(char *str, size_t size)
 {
-  int seed = time(NULL);
-  srand(seed);
+
   const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   if (size) {
       --size;
       for (size_t n = 0; n < size; n++) {
+          int seed = time(NULL);
+          srand(seed);
           int key = rand() % (int) (sizeof charset - 1);
           str[n] = charset[key];
       }
@@ -49,7 +50,9 @@ char* rand_string_alloc(size_t size)
 {
      char *s = malloc(size + 1);
      if (s) {
-         rand_string(s, size);
+        int seed = time(NULL);
+        srand(seed);
+        rand_string(s, size);
      }
      return s;
 }
@@ -64,6 +67,8 @@ double calc_zeta(){
 
 void generate_key_values(){
   for(int i=0; i< N_KEY; i++){
+    int seed = time(NULL);
+    srand(seed);
     char * _key = rand_string_alloc(key_size);
     keys[i] = _key;
   }
@@ -143,6 +148,8 @@ void write_all_keys(){
     char * _cmd = "INSERT ";
     char *key = keys[i];
     char * s = " ";
+    int seed = time(NULL);
+    srand(seed);
     char *val = rand_string_alloc(value_size);
     strcat(cmd, _cmd);
     strcat(cmd, key);
@@ -190,6 +197,8 @@ void *client_func() {
 
     char *key = next_key();
     char * s = " ";
+    int seed = time(NULL);
+    srand(seed);
     char *val = rand_string_alloc(value_size);
 
     strcat(cmd, _cmd);
