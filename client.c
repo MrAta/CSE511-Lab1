@@ -152,7 +152,7 @@ void write_all_keys(){
     strcat(cmd, key);
     strcat(cmd, s);
     strcat(cmd, val);
-    printf("Inserting %d key: %s\n", i, cmd);
+    printf("Inserting %d key", i);
     send(sock , cmd , strlen(cmd) , 0 );
     valread = read( sock , buffer, 1024);
     if(valread > 0){
@@ -241,7 +241,7 @@ int main(int argc, char const *argv[])
     serv_addr->sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr->sin_addr)<=0)
+    if(inet_pton(AF_INET, "130.203.16.21", &serv_addr->sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
