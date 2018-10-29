@@ -36,8 +36,8 @@ static char *rand_string(char *str, size_t size)
   if (size) {
       --size;
       for (size_t n = 0; n < size; n++) {
-          int seed = time(NULL);
-          srand(seed);
+          // int seed = time(NULL);
+          // srand(seed);
           int key = rand() % (int) (sizeof charset - 1);
           str[n] = charset[key];
       }
@@ -51,8 +51,8 @@ char* rand_string_alloc(size_t size)
      char *s = malloc(size + 1);
      if (s) {
         int seed = time(NULL);
-        srand(seed);
-        rand_string(s, size);
+        // srand(seed);
+        // rand_string(s, size);
      }
      return s;
 }
@@ -66,9 +66,9 @@ double calc_zeta(){
 }
 
 void generate_key_values(){
+  int seed = time(NULL);
+  srand(seed);
   for(int i=0; i< N_KEY; i++){
-    int seed = time(NULL);
-    srand(seed);
     char * _key = rand_string_alloc(key_size);
     keys[i] = _key;
   }
@@ -92,8 +92,8 @@ void calc_cdf(){
 }
 
 char * next_key(){
-  int seed = time(NULL);
-  srand(seed);
+  // int seed = time(NULL);
+  // srand(seed);
   double p = (rand() / (RAND_MAX+1.0))*cdf[N_KEY - 1];
   //TODO: optimize it with binary search
   for(int i=0; i< N_KEY; i++)
@@ -104,8 +104,8 @@ char * next_key(){
 }
 
 double nextArrival(){
-  int seed = time(NULL);
-  srand(seed);
+  // int seed = time(NULL);
+  // srand(seed);
   if (arr_type == 1){//unifrom
     return 1/arr_rate;
   }
@@ -116,8 +116,8 @@ double nextArrival(){
 }
 
 int nextReqType(){
-  int seed = time(NULL);
-  srand(seed);
+  // int seed = time(NULL);
+  // srand(seed);
   double p = (rand() / (RAND_MAX+1.0));
   //req types: 0 indicates get requst, 1 indicates put request
   if(p <= ratio) return 0;
@@ -126,6 +126,8 @@ int nextReqType(){
 }
 
 void write_all_keys(){
+  int seed = time(NULL);
+  srand(seed);
   int sock = 0, valread;
 
   char buffer[MAX_ENTRY_SIZE] = {0};
@@ -148,8 +150,6 @@ void write_all_keys(){
     char * _cmd = "INSERT ";
     char *key = keys[i];
     char * s = " ";
-    int seed = time(NULL);
-    srand(seed);
     char *val = rand_string_alloc(value_size);
     strcat(cmd, _cmd);
     strcat(cmd, key);
@@ -166,6 +166,8 @@ void write_all_keys(){
 }
 
 void *client_func() {
+  int seed = time(NULL);
+  srand(seed);
   int sock = 0, valread;
 
   char buffer[MAX_ENTRY_SIZE] = {0};
@@ -197,8 +199,6 @@ void *client_func() {
 
     char *key = next_key();
     char * s = " ";
-    int seed = time(NULL);
-    srand(seed);
     char *val = rand_string_alloc(value_size);
 
     strcat(cmd, _cmd);
