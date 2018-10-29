@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#define CACHE_SIZE 901
+#define CACHE_SIZE 101
 
 /********** GLOBAL DATA ***********/
 extern int global_cache_count;

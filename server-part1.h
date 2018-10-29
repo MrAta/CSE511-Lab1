@@ -20,7 +20,7 @@
 #define PORT 8085
 #define QUEUED_CONNECTIONS 5
 
-#define CACHE_SIZE 901
+#define CACHE_SIZE 101
 
 extern struct sockaddr_in address;
 

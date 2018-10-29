@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -247,26 +248,26 @@ int main(int argc, char const *argv[])
     }
 
     printf("Writing All the keys...\n");
-    clock_t w_t;
-    w_t = clock();
+    struct timeval  wtvs, wtve, atvs, atve;
+    gettimeofday(&wtvs, NULL);
     write_all_keys();
-    w_t = clock() - w_t;
-    printf("All keys are written.\n");
+    gettimeofday(&wtve, NULL);
 
+    printf("All keys are written.\n");
     printf("Starting running the workload...\n" );
-    clock_t _t;
-    _t = clock();
+
     pthread_t client_thread[NUM_THREADS];
+    gettimeofday(&atvs, NULL);
     for(int i=0; i<NUM_THREADS; i++)
       pthread_create(&client_thread[i], NULL, client_func, NULL);
     for(int i=0; i<10; i++)
       pthread_join(client_thread[i], NULL);
-    _t = clock();
-    double _time_taken = ((double)_t)/CLOCKS_PER_SEC;
-    double w_time_taken = ((double)w_t)/CLOCKS_PER_SEC;
+    gettimeofday(&atve, NULL);
+    double a_time_taken = (double) (atve.tv_usec - atvs.tv_usec) / 1000000 + (double) (atve.tv_sec - atvs.tv_sec);
+    double w_time_taken = (double) (wtve.tv_usec - wtvs.tv_usec) / 1000000 + (double) (wtve.tv_sec - wtvs.tv_sec);
     printf("Finished running the workload.\n");
     printf("Inserting all keys took: %f\n", w_time_taken);
-    printf("Workload took %f\n",_time_taken);
+    printf("Workload took %f\n",a_time_taken);
     fclose(fp);
     return 0;
 }
