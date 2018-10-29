@@ -204,12 +204,12 @@ void *client_func() {
     strcat(cmd, val);
     }
 
-    clock_t t;
-    t = clock();
+    struct timeval  rtvs, rtve;
+    gettimeofday(&rtvs, NULL);
     send(sock, cmd, strlen(cmd), 0);
     valread = read(sock, buffer, MAX_ENTRY_SIZE);
-    t = clock() - t;
-    double time_taken = ((double)t)/CLOCKS_PER_SEC;
+    gettimeofday(&rtve, NULL);
+    double time_taken = (double) (rtve.tv_usec - rtvs.tv_usec) / 1000000 + (double) (rtve.tv_sec - rtvs.tv_sec);
     pthread_mutex_lock(&fp_mutex);
     fprintf(fp, "%f\n", time_taken);
     pthread_mutex_unlock(&fp_mutex);
@@ -263,7 +263,7 @@ int main(int argc, char const *argv[])
     for(int i=0; i<10; i++)
       pthread_join(client_thread[i], NULL);
     gettimeofday(&atve, NULL);
-    double a_time_taken = (double) (atve.tv_usec - atvs.tv_usec) / 1000000 + (double) (atve.tv_sec - atvs.tv_sec);
+    double a_time_taken = c
     double w_time_taken = (double) (wtve.tv_usec - wtvs.tv_usec) / 1000000 + (double) (wtve.tv_sec - wtvs.tv_sec);
     printf("Finished running the workload.\n");
     printf("Inserting all keys took: %f\n", w_time_taken);
