@@ -143,7 +143,7 @@ void write_all_keys(){
   //To keep the system in steady state, we should have most popular keys in cache.
   //Therefor, we first write less popular keys and then popular keys to fill the cache
   for(int i=N_KEY -1; i >=0 ; i--){
-    char cmd[MAX_ENTRY_SIZE];
+    char cmd[MAX_ENTRY_SIZE] = "";
     char * _cmd = "INSERT ";
     char *key = keys[i];
     char * s = " ";
@@ -152,7 +152,7 @@ void write_all_keys(){
     strcat(cmd, key);
     strcat(cmd, s);
     strcat(cmd, val);
-
+    printf("Inserting %d key: %s\n", i, cmd);
     send(sock , cmd , strlen(cmd) , 0 );
     valread = read( sock , buffer, 1024);
     if(valread > 0){
@@ -183,7 +183,7 @@ void *client_func() {
   int local_count = 0;
   while (local_count <= (int)(NUM_OPS/NUM_THREADS)) {
 
-    char cmd[MAX_ENTRY_SIZE];
+    char cmd[MAX_ENTRY_SIZE] = "";
     char * _cmd = "PUT ";
     if(nextReqType() == 0){
       _cmd = "GET ";
