@@ -143,6 +143,7 @@ void write_all_keys(){
   }
   //To keep the system in steady state, we should have most popular keys in cache.
   //Therefor, we first write less popular keys and then popular keys to fill the cache
+  printf("Start Writing...\n" );
   for(int i=N_KEY -1; i >=0 ; i--){
     char cmd[MAX_ENTRY_SIZE] = "";
     char * _cmd = "INSERT ";
