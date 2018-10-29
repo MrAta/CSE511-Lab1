@@ -62,20 +62,30 @@ void *io_thread_func_2() {
           break;
       }
 
-      //writing to pipe_fd
-      int pipe_write_res;
-      pipe_write_res = write(pipe_fd[1], pending_head->cont, sizeof(struct continuation));//
-      if (pipe_write_res < 0) {
-        perror("write");
-      }
+      struct continuation _tmp_node_cont = *(pending_head->cont);
+
       struct pending_queue *dead_head = pending_head;
       pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
       free(dead_head);
       free(db_get_val);
       free(req_str);
+      db_cleanup();
+      pthread_mutex_unlock(&lock);
+      //writing to pipe_fd
+      int pipe_write_res;
+        printf("ARMIN starting to pipe\n" );
+      pipe_write_res = write(pipe_fd[1], &_tmp_node_cont, sizeof(struct continuation));//
+      printf("ATA finshed pipe\n" );
+      if (pipe_write_res < 0) {
+        perror("write");
+      }
+
+    } else{
+      db_cleanup();
+      pthread_mutex_unlock(&lock);
     }
-    db_cleanup();
-    pthread_mutex_unlock(&lock);
+
+
   }
 }
 
@@ -370,7 +380,7 @@ void event_loop_scheduler_2() {
 
 int run_server_2(void) {
   my_pid = getpid();
-
+  pthread_mutex_init(&lock,0);
   pending_head = pending_tail = NULL;
   head = tail = temp_node = NULL;
   db_init();
