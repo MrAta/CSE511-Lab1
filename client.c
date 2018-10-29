@@ -155,6 +155,7 @@ void write_all_keys(){
       printf("Inserted %d key(s).\n", N_KEY - i + 1);
       }
     }
+    close(sock);
 }
 
 void *client_func() {
@@ -211,6 +212,7 @@ void *client_func() {
     usleep(nextArrival()*1000000*NUM_THREADS);
     local_count++;
   }
+  close(sock);
 }
 
 int main(int argc, char const *argv[])
@@ -232,16 +234,16 @@ int main(int argc, char const *argv[])
     serv_addr->sin_family = AF_INET;
     serv_addr->sin_port = htons(PORT);
 
-    printf("Writing All the keys...\n");
-    write_all_keys();
-    printf("All keys are written.\n");
-
     // Convert IPv4 and IPv6 addresses from text to binary form
     if(inet_pton(AF_INET, "127.0.0.1", &serv_addr->sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
+
+    printf("Writing All the keys...\n");
+    write_all_keys();
+    printf("All keys are written.\n");
 
     printf("Starting running the workload...\n" );
     clock_t _t;
