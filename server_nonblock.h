@@ -16,7 +16,7 @@
 #include <pthread.h>
 #include "db.h"
 
-#define THREAD_POOL_SIZE 1
+#define THREAD_POOL_SIZE 50
 #define PORT 8085
 
 #define INVALID -1

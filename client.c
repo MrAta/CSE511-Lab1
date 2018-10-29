@@ -17,7 +17,7 @@
 #define value_size 84
 #define MAX_ENTRY_SIZE 11264
 #define NUM_THREADS 25
-#define NUM_OPS 20000//total number of operation for workload
+#define NUM_OPS 10000//total number of operation for workload
 double zeta = 0.0; //zeta fixed for zipf
 char * keys[N_KEY] = {NULL};
 // char * values[N_KEY] = {NULL};
@@ -152,9 +152,8 @@ void write_all_keys(){
     strcat(cmd, key);
     strcat(cmd, s);
     strcat(cmd, val);
-    printf("Inserting %d key", i);
     send(sock , cmd , strlen(cmd) , 0 );
-    valread = read( sock , buffer, 1024);
+    valread = read( sock , buffer, MAX_ENTRY_SIZE);
     if(valread > 0){
       printf("Inserted %d key(s).\n", N_KEY - i + 1);
       }
@@ -248,7 +247,10 @@ int main(int argc, char const *argv[])
     }
 
     printf("Writing All the keys...\n");
+    clock_t w_t;
+    w_t = clock();
     write_all_keys();
+    w_t = clock() - w_t;
     printf("All keys are written.\n");
 
     printf("Starting running the workload...\n" );
@@ -261,8 +263,10 @@ int main(int argc, char const *argv[])
       pthread_join(client_thread[i], NULL);
     _t = clock();
     double _time_taken = ((double)_t)/CLOCKS_PER_SEC;
+    double w_time_taken = ((double)w_t)/CLOCKS_PER_SEC;
     printf("Finished running the workload.\n");
-    printf("workload took %f\n",_time_taken );
+    printf("Inserting all keys took: %f\n", w_time_taken);
+    printf("Workload took %f\n",_time_taken);
     fclose(fp);
     return 0;
 }
