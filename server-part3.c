@@ -103,7 +103,7 @@ static void incoming_connection_handler_3(int sig, siginfo_t *si, void *data) {
     write(sig_handler_pipe[1], NEW_CONN, 1); // write type
     bytes_written_to_pipe++;
   } else { // signal for some other socket
-    write(sig_handler_pipe[1], EXISTING_CONN, 1); 
+    write(sig_handler_pipe[1], EXISTING_CONN, 1);
     write(sig_handler_pipe[1], &(si->si_value.sival_int), sizeof(int));
     printf("si->si_value.sival_int: %d\n", si->si_value.sival_int);
     bytes_written_to_pipe += 5;
@@ -231,7 +231,7 @@ static void outgoing_data_handler_3(int sig, siginfo_t *si, void *data) {
 void outgoing_data_handler_3_helper(struct continuation *req_cont) {
   pthread_mutex_lock(&lock); // prevent helper threads from messing with req_cont
 
-  char *req_string = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
+  char *req_string = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   char *req_type = NULL;
   char *req_key = NULL;
   char *save_ptr;
@@ -463,4 +463,3 @@ int run_server_3(void) {
 
   return 0;
 }
-

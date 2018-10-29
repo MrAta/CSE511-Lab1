@@ -10,12 +10,12 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
-#define PORT 8085
+#define PORT 8086
 #define N_KEY 1000 //total number of unique keys
 #define a 1.345675 //parameter for zipf distribution to obtain a 90% populariy for 10% of the keys.
 #define ratio 0.1 // get/put ratio
 #define key_size 16
-#define value_size 84
+#define value_size 80
 #define MAX_ENTRY_SIZE 11264
 #define NUM_THREADS 25
 #define NUM_OPS 10000//total number of operation for workload

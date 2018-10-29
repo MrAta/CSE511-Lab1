@@ -17,7 +17,7 @@
 #include "db.h"
 
 #define THREAD_POOL_SIZE 50
-#define PORT 8085
+#define PORT 8086
 
 #define INVALID -1
 #define GET 0

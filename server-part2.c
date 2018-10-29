@@ -115,7 +115,7 @@ void on_read_from_pipe_2() {
   if (read_pipe_res < 0) {
     perror("read");
   }
-  char *req_string = (char *) calloc(MAX_KEY_SIZE, sizeof(char));
+  char *req_string = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   char *req_type = NULL;
   char *req_key = NULL;
   char *val = NULL;
