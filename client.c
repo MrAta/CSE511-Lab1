@@ -11,14 +11,14 @@
 #include <string.h>
 #define PORT 8085
 #define N_KEY 1000 //total number of unique keys
-#define a 1 //parameter for zipf distribution
+#define a 1.345675 //parameter for zipf distribution
 #define ratio 0.1 // get/put ratio
 #define key_size 16
 #define value_size 84
 #define MAX_ENTRY_SIZE 11264
 #define NUM_THREADS 25
-#define NUM_OPS //total number of operation for workload
-long int zeta; //zeta fixed for zipf
+#define NUM_OPS 20000//total number of operation for workload
+double zeta = 0.0; //zeta fixed for zipf
 char * keys[N_KEY] = {NULL};
 // char * values[N_KEY] = {NULL};
 double popularities[N_KEY];
@@ -54,12 +54,12 @@ char* rand_string_alloc(size_t size)
      return s;
 }
 
-long int calc_zeta(){
+double calc_zeta(){
    double sum = 0.0;
   for(int i=1; i < N_KEY+1; i++)
-    sum += 1/(pow(i,a));
+    sum += (double)1.0/(pow(i,a));
 
-  return (long int)sum;
+  return sum;
 }
 
 void generate_key_values(){
@@ -174,14 +174,18 @@ void *client_func() {
       exit(0);
   }
   int local_count = 0;
-  while (local_count <= (int)NUM_OPS/NUM_THREADS) {
+  while (local_count <= (int)(NUM_OPS/NUM_THREADS)) {
 
     char cmd[MAX_ENTRY_SIZE];
-
-    if(nextReqType() == 0)
+    char * _cmd = "PUT ";
+    if(nextReqType() == 0){
       _cmd = "GET ";
-    else
-      _cmd = "PUT ";
+
+    char *key = next_key();
+    strcat(cmd, _cmd);
+    strcat(cmd, key);
+    }
+    else{
 
     char *key = next_key();
     char * s = " ";
@@ -191,6 +195,7 @@ void *client_func() {
     strcat(cmd, key);
     strcat(cmd, s);
     strcat(cmd, val);
+    }
 
     clock_t t;
     t = clock();
@@ -227,9 +232,9 @@ int main(int argc, char const *argv[])
     serv_addr->sin_family = AF_INET;
     serv_addr->sin_port = htons(PORT);
 
-    printf("Writing All the keys...\n", );
+    printf("Writing All the keys...\n");
     write_all_keys();
-    printf("All keys are written.\n", );
+    printf("All keys are written.\n");
 
     // Convert IPv4 and IPv6 addresses from text to binary form
     if(inet_pton(AF_INET, "127.0.0.1", &serv_addr->sin_addr)<=0)
