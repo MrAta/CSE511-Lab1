@@ -202,7 +202,7 @@ void event_loop_scheduler_2() {
   //creating main thread fd
   initial_server_fd = server_func_2();
   make_socket_non_blocking_2(initial_server_fd);
-  
+
 
   int retval;
   //our reading set for select
@@ -278,7 +278,10 @@ void event_loop_scheduler_2() {
         memset(temp->buffer, 0, MAX_ENTRY_SIZE);
 
         valread = read(events[i].data.fd, temp->buffer, MAX_ENTRY_SIZE);
-        if(valread < 0 ) continue;
+        if(valread < 0 ) {
+          close(events[i].data.fd);
+          continue;
+        }
         req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
         strcpy (req_string, temp->buffer);
 
@@ -290,7 +293,11 @@ void event_loop_scheduler_2() {
           free(req_string);
           continue;
         }
-        if(req_type == NULL) continue;
+        if(req_type == NULL){
+          close(events[i].data.fd);
+          continue;
+        }
+
         //checking reques type
         if (strcmp(req_type, "GET") == 0) {
           temp->request_type = GET;
