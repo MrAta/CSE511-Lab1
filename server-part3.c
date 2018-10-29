@@ -140,9 +140,10 @@ void incoming_connection_handler_3_helper(int sock) {
   tmp = (struct continuation *) malloc(sizeof(struct continuation));
   tmp->start_time = time(0);
   memset(tmp->buffer, 0, MAX_ENTRY_SIZE);
-  valread = read(sock, tmp->buffer, MAX_ENTRY_SIZE);
+  // valread = read(sock, tmp->buffer, MAX_ENTRY_SIZE);
 
-  if (valread <= 0) {
+  if (!(valread = read(sock, tmp->buffer, MAX_ENTRY_SIZE))) {
+    printf("%s\n", "closing socket\n");
     close(sock);
     return;
   }
