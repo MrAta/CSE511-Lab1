@@ -31,13 +31,12 @@ FILE *fp;
 
 static char *rand_string(char *str, size_t size)
 {
-
+  // int seed = time(NULL);
+  // srand(seed);
   const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   if (size) {
       --size;
       for (size_t n = 0; n < size; n++) {
-          // int seed = time(NULL);
-          // srand(seed);
           int key = rand() % (int) (sizeof charset - 1);
           str[n] = charset[key];
       }
@@ -50,9 +49,7 @@ char* rand_string_alloc(size_t size)
 {
      char *s = malloc(size + 1);
      if (s) {
-        int seed = time(NULL);
-        // srand(seed);
-        // rand_string(s, size);
+         rand_string(s, size);
      }
      return s;
 }
