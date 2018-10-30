@@ -279,7 +279,7 @@ int main(int argc, char const *argv[])
     printf("Writing All the keys...\n");
     struct timeval  wtvs, wtve, atvs, atve;
     gettimeofday(&wtvs, NULL);
-    //write_all_keys();
+    write_all_keys();
     gettimeofday(&wtve, NULL);
 
     printf("All keys are written.\n");
