@@ -289,7 +289,8 @@ void event_loop_scheduler_2() {
 
         valread = read(events[i].data.fd, temp->buffer, MAX_ENTRY_SIZE);
         if(valread < 0 ) {
-          close(events[i].data.fd);
+          // close(events[i].data.fd);
+          send(temp->fd, "NULL", 4, 0);
           continue;
         }
         req_string = (char *) malloc(MAX_ENTRY_SIZE * sizeof(char));
