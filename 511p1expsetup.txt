@@ -67,18 +67,19 @@ Average RT(ms):  224.6036065050388
 95th RT(ms):  249.408
 99th RT(ms):  258.297
 - get/put ratio: 0.5
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
+        Throughput: 188
+Average RT(ms):  130.94423248375836
+50th RT(ms):  133.26
+95th RT(ms):  177.476
+99th RT(ms):  255.96099999999998
+
+
 - get/put ratio: 0.9
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
+        Throughput:  770
+Average RT(ms):  32.76639865272461
+50th RT(ms):  31.438000000000002
+95th RT(ms):  66.241
+99th RT(ms):  87.23100000000001
 
 
 On server 2: //TODO
