@@ -237,6 +237,9 @@ void *client_func() {
       return (void *) gbg;
     }
     gettimeofday(&rtve, NULL);
+    if(rv == 0)
+    double time_taken = (double) (rtve.tv_usec - rtvs.tv_usec) / 1000000 + (double) (rtve.tv_sec - 10 - rtvs.tv_sec);
+    else
     double time_taken = (double) (rtve.tv_usec - rtvs.tv_usec) / 1000000 + (double) (rtve.tv_sec - rtvs.tv_sec);
     pthread_mutex_lock(&fp_mutex);
     fprintf(fp, "%f\n", time_taken);
