@@ -300,11 +300,13 @@ void event_loop_scheduler_2() {
 
         if (( req_type = strtok_r(req_string, " ", &save_ptr)) == NULL) { // will ensure strlen>0
           // TODO: update timings since we send directly here (and below)
+          send(temp->fd, "NULL", 4, 0);
           free(req_string);
           continue;
         }
         if(req_type == NULL){
         send(temp->fd, "NULL", 4, 0);//  close(events[i].data.fd);
+        free(req_string);
           continue;
         }
 
