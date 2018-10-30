@@ -14,8 +14,8 @@
 #define N_KEY 1000 //total number of unique keys
 #define a 1.345675 //parameter for zipf distribution to obtain a 90% populariy for 10% of the keys.
 #define ratio 0.1 // get/put ratio
-#define key_size 16
-#define value_size 80
+#define key_size 1024
+#define value_size 10225
 #define MAX_ENTRY_SIZE 11264
 #define NUM_THREADS 25
 #define NUM_OPS 10000//total number of operation for workload
@@ -167,6 +167,7 @@ void *client_func() {
   int seed = time(NULL);
   srand(seed);
   int sock = 0, valread;
+  char *gbg;
 
   char buffer[MAX_ENTRY_SIZE] = {0};
 
@@ -209,6 +210,11 @@ void *client_func() {
     gettimeofday(&rtvs, NULL);
     send(sock, cmd, strlen(cmd), 0);
     valread = read(sock, buffer, MAX_ENTRY_SIZE);
+    if (valread == 0) {
+      printf("Socket closed\n");
+      close(sock);
+      return (void *) gbg;
+    }
     gettimeofday(&rtve, NULL);
     double time_taken = (double) (rtve.tv_usec - rtvs.tv_usec) / 1000000 + (double) (rtve.tv_sec - rtvs.tv_sec);
     pthread_mutex_lock(&fp_mutex);
@@ -220,6 +226,7 @@ void *client_func() {
     local_count++;
   }
   close(sock);
+  return (void *) gbg;
 }
 
 int main(int argc, char const *argv[])
@@ -242,7 +249,7 @@ int main(int argc, char const *argv[])
     serv_addr->sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "130.203.16.21", &serv_addr->sin_addr)<=0)
+    if(inet_pton(AF_INET, "172.17.0.3", &serv_addr->sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;

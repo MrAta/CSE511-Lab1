@@ -62,7 +62,7 @@ void *io_thread_func_2() {
           break;
       }
 
-      struct continuation _tmp_node_cont = *(pending_head->cont);
+      struct continuation *_tmp_node_cont = pending_head->cont;
 
       struct pending_queue *dead_head = pending_head;
       pending_head = pending_head->next; // free the pending_node in task queue, the cont is freed in outgoing
@@ -74,7 +74,7 @@ void *io_thread_func_2() {
       //writing to pipe_fd
       int pipe_write_res;
         printf("ARMIN starting to pipe\n" );
-      pipe_write_res = write(pipe_fd[1], &_tmp_node_cont, sizeof(struct continuation));//
+      pipe_write_res = write(pipe_fd[1], _tmp_node_cont, sizeof(struct continuation));//
       printf("ATA finshed pipe\n" );
       if (pipe_write_res < 0) {
         perror("write");

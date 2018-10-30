@@ -88,12 +88,8 @@ void *server_handler(void *arg) {
     value = strtok_r(NULL, " ", &save_ptr);
     if (tokens == NULL || key == NULL) {
       printf("Invalid key/command received\n");
-      db_cleanup();
-      free(input_line);
-      free(arg);
-      return NULL;
-    }
-    if (strncmp(tokens, "GET", 3) == 0) {
+      write(sockfd, "BAD BOI", 8);
+    } else if (strncmp(tokens, "GET", 3) == 0) {
       server_1_get_request(key, &response, &response_size);
       write(sockfd, response, (size_t) response_size);
     } else if (strncmp(tokens, "PUT", 3) == 0) {
@@ -109,7 +105,9 @@ void *server_handler(void *arg) {
       write(sockfd, "ERROR", 6);
     }
     db_cleanup();
-    free(response);
+    if (response != NULL) {
+      free(response);
+    }
     free(input_line);
     input_line = NULL;
     input_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char *));
