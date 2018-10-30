@@ -15,7 +15,7 @@ struct node {
   char *name;
   char *defn;
   struct node *next, *prev;
-} *head,*tail,*curr,*temp_node;
+} *head,*tail,*temp_node;
 
 /************ INTERFACE *********/
 

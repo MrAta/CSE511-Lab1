@@ -8,9 +8,7 @@
 #include <pthread.h>
 #define PORT 8080
 
-char *hello[] = {"GET Aman"};
-char *mello[] = {"DELETE Fay"};
-char *cello[] = {"GET Fay"};
+char *hello[] = {"PUT Aman Jain"};
 struct sockaddr_in *serv_addr;
 
 void *client_func() {
@@ -39,7 +37,7 @@ void *client_func() {
 
 int main(int argc, char const *argv[])
 {
-    pthread_t client_thread[10];
+    pthread_t client_thread;
 
     serv_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in));
 
@@ -55,10 +53,9 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    for (int i=0; i< 10; i++)
-    pthread_create(&client_thread[i], NULL, client_func, NULL);
-for (int i=0; i< 10; i++)
-    pthread_join(client_thread[i], NULL);
+    pthread_create(&client_thread, NULL, client_func, NULL);
+
+    pthread_join(client_thread, NULL);
 
     return 0;
 }

@@ -1,3 +1,6 @@
+server
+client
+client2
 Dockerfile
 .idea/
 *.o
@@ -11,3 +14,13 @@ client3
 client4
 client5
 server
+run
+deb
+l1
+.server_nonblock.h.swp
+client6
+client7
+client8
+l2
+l3
+l4

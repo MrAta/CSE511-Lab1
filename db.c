@@ -7,38 +7,43 @@ char *filename = "names.txt";
 // Lock the file when connected to it
 pthread_mutex_t db_mutex;
 
+void db_init() {
+  pthread_mutex_init(&db_mutex, 0);
+}
+
 void db_connect()  {
   pthread_mutex_lock(&db_mutex);
   file = fopen(filename, "r+");
 }
 
 void db_cleanup() {
-  fclose(file);
+  if (file != NULL) {
+    fclose(file);
+    file = NULL;
+  }
   pthread_mutex_unlock(&db_mutex);
 }
 
 
 int db_get(char *key, char **ret_buf, int *ret_len) {
-  char *tmp_line = NULL, *line_key = NULL, *line_val = NULL;
-  tmp_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
+  char tmp_line[MAX_ENTRY_SIZE], *line_key = NULL, *line_val = NULL, *save_ptr;
+  //tmp_line = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   while (1) {
     if (fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL) {
-      line_key = strtok(tmp_line, " ");
+      line_key = strtok_r(tmp_line, " ", &save_ptr);
       if (strcmp(line_key, key) == 0) { // found key in db
-        line_val = strtok(NULL, " ");
+        line_val = strtok_r(NULL, " ", &save_ptr);
         strncpy(*ret_buf, line_val, strlen(line_val));
         strncpy(*ret_buf + strlen(line_val), "\0", 1);
         *ret_len = (int) strlen(line_val);
-        free(tmp_line);
         rewind(file);
         return EXIT_SUCCESS;
       }
-      continue;
+      //continue;
     } else { // end of file (or other error reading); didnt find key
-      strcpy(*ret_buf, "KEY NOT FOUND");
-      *ret_len = 13;
-      free(tmp_line);
+      strcpy(*ret_buf, "NOTFOUND");
+      *ret_len = 8;
       rewind(file);
       return EXIT_FAILURE;
     }
@@ -54,7 +59,7 @@ int db_insert(char *key, char *value, char **ret_buf, int *ret_len) {
   found = db_search(key, &fbuf, &fbuf_bytes);
 
   if (found) { // duplicate key error
-    strcpy(*ret_buf, "DUPLICATE KEY");
+    strcpy(*ret_buf, "DUPLICATE");
     *ret_len = 13;
     free(fbuf);
     return EXIT_FAILURE;
@@ -84,11 +89,10 @@ int db_put(char *key, char *value, char **ret_buf, int *ret_len) {
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   found = db_search(key, &fbuf, &fbuf_bytes);
   if (!found) {
-    strcpy(*ret_buf, "ILLEGAL KEY"); // key not found in db to do put, return NULL, dont update to file
-    *ret_len = 11;
+    strcpy(*ret_buf, "NOTFOUND"); // key not found in db to do put, return NULL, dont update to file
+    *ret_len = 8;
     free(fbuf);
     fbuf = NULL;
-    pthread_mutex_unlock(&db_mutex);
     return EXIT_FAILURE;
   } else {
     // key found in db, add the new k/v to the end of file
@@ -96,7 +100,6 @@ int db_put(char *key, char *value, char **ret_buf, int *ret_len) {
     memcpy(fbuf + fbuf_bytes + strlen(key), " ", 1);
     memcpy(fbuf + fbuf_bytes + strlen(key) + 1, value, strlen(value));
     memcpy(fbuf + fbuf_bytes + strlen(key) + 1 + strlen(value), "\n", 1);
-
     rewind(file);
     fwrite(fbuf, sizeof(char), fbuf_bytes + strlen(key) + 1 + strlen(value) + 1, file);
     fflush(file);
@@ -116,10 +119,9 @@ int db_delete(char *key, char **ret_buf, int *ret_len) {
   *ret_buf = (char *) calloc(MAX_ENTRY_SIZE, sizeof(char));
   found = db_search(key, &fbuf, &fbuf_bytes);
   if (!found) {
-    strcpy(*ret_buf, "ILLEGAL KEY");
-    *ret_len = 11;
+    strcpy(*ret_buf, "NOTFOUND");
+    *ret_len = 8;
     free(fbuf);
-    pthread_mutex_unlock(&db_mutex);
     return EXIT_FAILURE;
   } else { // key found in db, write fbuf to file without that entry
     rewind(file);
@@ -136,6 +138,7 @@ int db_delete(char *key, char **ret_buf, int *ret_len) {
 int db_search(const char *key, char **fbuf, int *fbuf_bytes) {
   char *tmp_line = NULL;
   char *tmp_line_copy = NULL;
+  char *save_ptr;
   (*fbuf) = NULL;
   int fsz, found = 0;
   char *line_key = NULL;
@@ -152,7 +155,7 @@ int db_search(const char *key, char **fbuf, int *fbuf_bytes) {
     if (fgets(tmp_line, MAX_ENTRY_SIZE, file) != NULL) {
       memset(tmp_line_copy, 0, MAX_ENTRY_SIZE);
       memcpy(tmp_line_copy, tmp_line, strlen(tmp_line));
-      line_key = strtok(tmp_line, " ");
+      line_key = strtok_r(tmp_line, " ", &save_ptr);
       if (strcmp(line_key, key) == 0) { // found key in db; error
         found = 1;
         continue;

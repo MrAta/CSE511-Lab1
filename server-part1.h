@@ -17,7 +17,7 @@
 #include "cache.h"
 #include "db.h"
 
-#define PORT 8080
+#define PORT 8086
 #define QUEUED_CONNECTIONS 5
 
 #define CACHE_SIZE 101

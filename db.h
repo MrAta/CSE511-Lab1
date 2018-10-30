@@ -15,14 +15,15 @@
 
 // need to check over these
 #define MAX_KEY_SIZE 1024
-#define MAX_VALUE_SIZE 1024
-#define MAX_ENTRY_SIZE 1024
+#define MAX_VALUE_SIZE 11264
+#define MAX_ENTRY_SIZE 11264
 
 // Database file
 FILE *file;
 
 extern char *filename;
 
+void db_init();
 void db_connect();
 void db_cleanup();
 /**
