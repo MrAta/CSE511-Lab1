@@ -207,9 +207,30 @@ void *client_func() {
     }
 
     struct timeval  rtvs, rtve;
+    fd_set set;
+    struct timeval timeout;
+    int rv;
     gettimeofday(&rtvs, NULL);
     send(sock, cmd, strlen(cmd), 0);
-    valread = read(sock, buffer, MAX_ENTRY_SIZE);
+    FD_ZERO(&set); /* clear the set */
+    FD_SET(sock, &set); /* add our file descriptor to the set */
+
+    timeout.tv_sec = 10;
+    timeout.tv_usec = 0;
+
+    rv = select(sock + 1, &set, NULL, NULL, &timeout);
+    if(rv == -1) {
+      perror("select\n"); /* an error accured */
+      usleep(nextArrival()*1000000*NUM_THREADS);
+      continue;
+    }
+    else if(rv == 0) {
+      printf("timeout\n"); /* a timeout occured */
+      usleep(nextArrival()*1000000*NUM_THREADS);
+      continue;
+    }
+    else
+      valread = read( sock, buffer, MAX_ENTRY_SIZE ); /* there was data to read */
     if (valread == 0) {
       printf("Socket closed\n");
       close(sock);
@@ -249,7 +270,7 @@ int main(int argc, char const *argv[])
     serv_addr->sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "172.17.0.3", &serv_addr->sin_addr)<=0)
+    if(inet_pton(AF_INET, "172.17.0.5", &serv_addr->sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
@@ -258,7 +279,7 @@ int main(int argc, char const *argv[])
     printf("Writing All the keys...\n");
     struct timeval  wtvs, wtve, atvs, atve;
     gettimeofday(&wtvs, NULL);
-    write_all_keys();
+    //write_all_keys();
     gettimeofday(&wtve, NULL);
 
     printf("All keys are written.\n");
