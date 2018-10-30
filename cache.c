@@ -7,7 +7,8 @@ int global_cache_count = 0;
 
 struct node *cache_get(char *s) {
   struct node *iterator = head, *temporary;
-  while (iterator != NULL) {
+  while (iterator != NULL && iterator->name !=NULL && s!= NULL) {
+    if(strlen(iterator->name) == strlen(s))
     if (strcmp(iterator->name, s) == 0) {
       //found in cache, move node to head of list
       // and return value of key
@@ -84,9 +85,12 @@ void cache_invalidate(char *key) {
 }
 
 char *strdups(char *s) {/* make a duplicate of s */
+if(s != NULL){
   char *p;
   p = (char *) malloc(strlen(s) + 1); /* +1 for ’\0’ */
   if (p != NULL)
     strcpy(p, s);
   return p;
+}
+return NULL;
 }
