@@ -1,4 +1,4 @@
-﻿Client on inst01
+Client on inst01
 Server on inst02
 Request arrival rate: 50 req/sec uniform distribution
 Number of unique keys: 1000
@@ -7,222 +7,185 @@ Number of client threads: 25
 Zipfian distribution for popularity: 90-10: 90 percent of traffic goes to 10 percent of keys.
 Cache size 101 for getting 90% hit ratio.
 
-
 On server 1:
-        Key+val = 100B
-        - get/put ratio: 0.1
-        Throughput: 4065 req/sec
-        Average RT(ms):  6.121647427199672
-50th RT(ms):  6.144
-95th RT(ms):  6.862
-99th RT(ms):  6.976999999999999
+	Key+val = 100B
+	- get/put ratio: 0.1
+	Throughput: 4545 req/sec
+Average RT(ms):  0.005639203344867396
+50th RT(ms):  0.005867
+95th RT(ms):  0.006874
+99th RT(ms):  0.006973
+
+- get/put ratio: 0.5
+	Throughput: 5882 request/sec
+Average RT(ms):  0.0018455985029940155
+50th RT(ms):  0.001815
+95th RT(ms):  0.002638
+99th RT(ms):  0.003228
+
+- get/put ratio: 0.9
+	Throughput: 9090 req/sec
+Average RT(ms):  0.0007916391246548777
+50th RT(ms):  0.000654
+95th RT(ms):  0.001574
+99th RT(ms):  0.002038
+
+        Key+val = 1KB
+	- get/put ratio: 0.1
+	Throughput: 1250 req/sec
+Average RT(ms):  0.019921054510322427
+50th RT(ms):  0.020049
+95th RT(ms):  0.022138
+99th RT(ms):  0.022612
+
+- get/put ratio: 0.5
+	Throughput: 2040 req/sec
+Average RT(ms):  0.011188800799600185
+50th RT(ms):  0.011564
+95th RT(ms):  0.015526
+99th RT(ms):  0.017003
+
+- get/put ratio: 0.9
+	Throughput: 7042 req/sec
+Average RT(ms):  0.0034915305838243284
+50th RT(ms):  0.003404
+95th RT(ms):  0.006136
+99th RT(ms):  0.007855
+
+         Key+val = 8KB 
+	- get/put ratio: 0.1
+	Throughput:  158
+Average RT(ms):  0.1576766369445827
+50th RT(ms):  0.158779
+95th RT(ms):  0.174454
+99th RT(ms):  0.177147
+
+- get/put ratio: 0.5
+	Throughput: 285
+Average RT(ms):  0.08743112619712684
+50th RT(ms):  0.087803
+95th RT(ms):  0.115903
+99th RT(ms):  0.128593
+
+- get/put ratio: 0.9
+	Throughput:  1133
+Average RT(ms):  0.02172869011406858
+50th RT(ms):  0.021001
+95th RT(ms):  0.043132
+99th RT(ms):  0.054035
+
+On server 2: 
+	Key+val = 100B
+	- get/put ratio: 0.1
+	Throughput: 7.47
+Average RT(ms):  0.43661294345297924
+50th RT(ms):  0.333327
+95th RT(ms):  1.219768
+99th RT(ms):  1.960224
 
 
 - get/put ratio: 0.5
-        Throughput: 6849 request/sec
-Average RT(ms):  3.499883054345334
-50th RT(ms):  3.4650000000000003
-95th RT(ms):  4.702999999999999
-99th RT(ms):  5.919
-
+	Throughput:  10.3
+Average RT(ms):  0.3739768131062957
+50th RT(ms):  0.244055
+95th RT(ms):  1.203486
+99th RT(ms):  2.078711
 
 - get/put ratio: 0.9
-        Throughput: 7092 req/sec
-Average RT(ms):  0.5407963424771403
-50th RT(ms):  0.294
-95th RT(ms):  0.8180000000000001
-99th RT(ms):  1.0970000000000002
+	Throughput:  17
+Average RT(ms):  0.21560721354948345
+50th RT(ms):  0.076939
+95th RT(ms):  0.855583
+99th RT(ms):  1.659724
 
 
         Key+val = 1KB
-        - get/put ratio: 0.1
-        Throughput: 1190 req/sec
-Average RT(ms):  20.828955103262395
-50th RT(ms):  21.105
-95th RT(ms):  22.917
-99th RT(ms):  23.161
-
-
+	- get/put ratio: 0.1
+	Throughput: 8.25
+Average RT(ms):  0.41955017506234354
+50th RT(ms):  0.329424
+95th RT(ms):  1.10127
+99th RT(ms):  1.682631
 - get/put ratio: 0.5
-        Throughput: 2057 req/sec
-Average RT(ms):  12.04125345622116
-50th RT(ms):  12.049000000000001
-95th RT(ms):  15.712
-99th RT(ms):  17.665
-
+	Throughput: 9.8 
+Average RT(ms):  0.3340403731670811
+50th RT(ms):  0.234791
+95th RT(ms):  1.019837
+99th RT(ms):  1.640207
 
 - get/put ratio: 0.9
-        Throughput: 7874 req/sec
-Average RT(ms):  3.2374215857492072
-50th RT(ms):  3.0799999999999996
-95th RT(ms):  5.781
-99th RT(ms):  7.197
+	Throughput: 18 
+Average RT(ms):  0.20413999323285092
+50th RT(ms):  0.06086
+95th RT(ms):  0.831893
+99th RT(ms):  1.537647
 
-
-         Key+val = 10KB 
-        - get/put ratio: 0.1
-        Throughput:  111
-Average RT(ms):  224.6036065050388
-50th RT(ms):  227.04
-95th RT(ms):  249.408
-99th RT(ms):  258.297
+         Key+val = 8KB
+	- get/put ratio: 0.1
+	Throughput: 7.8
+Average RT(ms):  0.4726587629925183
+50th RT(ms):  0.37513
+95th RT(ms):  1.254349
+99th RT(ms):  1.902553
 - get/put ratio: 0.5
-        Throughput: 188
-Average RT(ms):  130.94423248375836
-50th RT(ms):  133.26
-95th RT(ms):  177.476
-99th RT(ms):  255.96099999999998
-
+	Throughput: 10.4
+Average RT(ms):  0.34985256389027297
+50th RT(ms):  0.247946
+95th RT(ms):  1.068909
+99th RT(ms):  1.86513
 
 - get/put ratio: 0.9
-        Throughput:  770
-Average RT(ms):  32.76639865272461
-50th RT(ms):  31.438000000000002
-95th RT(ms):  66.241
-99th RT(ms):  87.23100000000001
-
-
-On server 2: //TODO
-        Key+val = 100B
-        - get/put ratio: 0.1
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.5
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.9
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-        Key+val = 1KB
-        - get/put ratio: 0.1
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.5
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.9
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-
-
-         Key+val = 10KB
-        - get/put ratio: 0.1
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.5
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.9
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-
-
+	Throughput: 18.6 
+Average RT(ms):  0.2245934687281792
+50th RT(ms):  0.085349
+95th RT(ms):  0.83934
+99th RT(ms):  1.540731
 
 
 On server 3:
-        Key+val = 100B
-        - get/put ratio: 0.1
-        Throughput: 9.5 req/sec
-Average RT(ms):  2332.0740695235213
-50th RT(ms):  2115.34
-95th RT(ms):  5039.332
-99th RT(ms):  6333.684
-
+	Key+val = 100B
+	- get/put ratio: 0.1
+	Throughput: 9.2
+Average RT(ms):  2.5735531686470368
+50th RT(ms):  2.496794
+95th RT(ms):  5.009678
+99th RT(ms):  5.879064
 
 - get/put ratio: 0.5
-        Throughput: 13.5 req/sec 
-Average RT(ms):  1747.7569169077344
-50th RT(ms):  1577.843
-95th RT(ms):  4079.91
-99th RT(ms):  5262.175
-
+	Throughput: 10.8
+Average RT(ms):  2.2744256150623374
+50th RT(ms):  2.11624
+95th RT(ms):  4.719978
+99th RT(ms):  5.761997
 
 - get/put ratio: 0.9
-        Throughput: 30 req/sec
-Average RT(ms):  838.9529431421397
-50th RT(ms):  715.272
-95th RT(ms):  2227.96
-99th RT(ms):  3032.5229999999997
+	Throughput: 23.1
+Average RT(ms):  1.0457574648702554
+50th RT(ms):  0.927598
+95th RT(ms):  2.671831
+99th RT(ms):  3.537039
 
 
         Key+val = 1KB
-        - get/put ratio: 0.1
-        Throughput: 9 rec/sec
-Average RT(ms):  2801.528439784309
-50th RT(ms):  2736.388
-95th RT(ms):  5319.763
-99th RT(ms):  6387.8
-
+	- get/put ratio: 0.1
+	Throughput: 8.3
+Average RT(ms):  1.0786716533506449
+50th RT(ms):  0.939162
+95th RT(ms):  2.647948
+99th RT(ms):  3.547436
 
 - get/put ratio: 0.5
-        Throughput: 12.8
-Average RT(ms):  1813.3331118204464
-50th RT(ms):  1601.2269999999999
-95th RT(ms):  4379.692
-99th RT(ms):  5548.021000000001
-- get/put ratio: 0.9
-Throughput: 32.8
-Average RT(ms):  1410
-50th RT(ms):  1301.226999999999
-95th RT(ms):  3141.6
-99th RT(ms):  4441
+	Throughput: 10.9
+Average RT(ms):  2.093887824680506
+50th RT(ms):  1.947262
+95th RT(ms):  4.449529
+99th RT(ms):  5.555936
 
-
-         Key+val = 10KB
-        - get/put ratio: 0.1
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
-- get/put ratio: 0.5
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
 - get/put ratio: 0.9
-        Time to insert all keys:
-        Throughput: 
-        Average Response Time: 
-        50th Response Time:
-        95th Response Time:
-        99th Response Time:
+Throughput: 23
+Average RT(ms):  1.051977375062345
+50th RT(ms):  0.913905
+95th RT(ms):  2.664072
+99th RT(ms):  3.609184
+
+ 
